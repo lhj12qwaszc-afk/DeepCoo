@@ -146,7 +146,7 @@ public static class MazeBuilder
     }
 
     // Puts the rigged monster model at the spawn point, facing up the corridor (north),
-    // with its wandering, walking and tentacle scripts.
+    // with its movement, senses, walking and tentacle scripts.
     // Returns false when the model hasn't been imported, so the placeholder marker is used.
     static bool PlaceMonster(Vector3 position)
     {
@@ -157,6 +157,7 @@ public static class MazeBuilder
         monster.name = "PigeonMonster";
         monster.transform.SetPositionAndRotation(position, Quaternion.identity);
         monster.AddComponent<MonsterWander>();
+        monster.AddComponent<MonsterSenses>();
         monster.AddComponent<MonsterGait>();
         monster.AddComponent<TentacleWiggle>();
         return true;
