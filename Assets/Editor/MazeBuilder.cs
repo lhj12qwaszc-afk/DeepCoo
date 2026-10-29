@@ -10,32 +10,21 @@ public static class MazeBuilder
     // '#' = wall, '.' = floor. Row 0 is the north edge (top of the floor plan).
     static readonly string[] Layout =
     {
-        "###########################",
-        "###########################",
-        "##.......................##",
-        "##.......................##",
-        "######.####.###########..##",
-        "##.###.####.###.....###..##",
-        "##.###.####.###.#######..##",
-        "##.....####........####..##",
-        "######...#########.####..##",
-        "########.#########.####..##",
-        "##.......................##",
-        "##.......................##",
-        "##..####.###########.######",
-        "##..####.##.....####.######",
-        "##..#....##.###.####.######",
-        "##..#.##.##.###.####.######",
-        "##..#.##.##.#####.##.##.###",
-        "##..#.##......###.##.##.###",
-        "##..#..######.###....##.###",
-        "##..#########.#########.###",
-        "##..#...#####.###.......###",
-        "##..###.#####.###.#########",
-        "##.......................##",
-        "##.......................##",
-        "###########################",
-        "###########################",
+        "###############",
+        "#.............#",
+        "#.#######.#####",
+        "#...#...#.....#",
+        "#.###.#.#####.#",
+        "#.#...#...#...#",
+        "#.#.#####.#.###",
+        "#.#.#...#.#...#",
+        "#.#.#.#.#.###.#",
+        "#.#.#.#.#...#.#",
+        "#.#.###.###.#.#",
+        "#.#...#.#...#.#",
+        "#####.#.#.###.#",
+        "#.....#.......#",
+        "###############",
     };
 
     const float CellSize = 2f;
@@ -53,13 +42,11 @@ public static class MazeBuilder
 
     static readonly Marker[] Markers =
     {
-        new Marker { Name = "PlayerStart",    Col = 3.0f,  Row = 3.0f,  Color = Color.white,                  Shape = PrimitiveType.Capsule },
-        new Marker { Name = "Key_A",          Col = 2.5f,  Row = 5.5f,  Color = new Color(1f, 0.85f, 0.2f),   Shape = PrimitiveType.Cube },
-        new Marker { Name = "Clue_A",         Col = 19.5f, Row = 5.5f,  Color = new Color(0.3f, 0.6f, 1f),    Shape = PrimitiveType.Cylinder },
-        new Marker { Name = "Key_B",          Col = 15.5f, Row = 15.5f, Color = new Color(1f, 0.85f, 0.2f),   Shape = PrimitiveType.Cube },
-        new Marker { Name = "MonsterSpawn",   Col = 17.5f, Row = 16.5f, Color = new Color(0.6f, 0.1f, 0.15f), Shape = PrimitiveType.Capsule },
-        new Marker { Name = "Clue_B",         Col = 5.5f,  Row = 18.5f, Color = new Color(0.3f, 0.6f, 1f),    Shape = PrimitiveType.Cylinder },
-        new Marker { Name = "ExitDoor",       Col = 24.5f, Row = 23.0f, Color = new Color(0.2f, 0.9f, 0.4f),  Shape = PrimitiveType.Cube },
+        new Marker { Name = "PlayerStart",    Col = 1.5f,  Row = 13.5f, Color = Color.white,                  Shape = PrimitiveType.Capsule },
+        new Marker { Name = "Key_A",          Col = 1.5f,  Row = 1.5f,  Color = new Color(1f, 0.85f, 0.2f),   Shape = PrimitiveType.Cube },
+        new Marker { Name = "Clue_A",         Col = 7.5f,  Row = 7.5f,  Color = new Color(0.3f, 0.6f, 1f),    Shape = PrimitiveType.Cylinder },
+        new Marker { Name = "MonsterSpawn",   Col = 13.5f, Row = 11.5f, Color = new Color(0.6f, 0.1f, 0.15f), Shape = PrimitiveType.Capsule },
+        new Marker { Name = "ExitDoor",       Col = 13.5f, Row = 1.5f,  Color = new Color(0.2f, 0.9f, 0.4f),  Shape = PrimitiveType.Cube },
     };
 
     [MenuItem("DeepCoo/Build Maze Scene")]
