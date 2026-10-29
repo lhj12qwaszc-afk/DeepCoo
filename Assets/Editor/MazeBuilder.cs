@@ -7,27 +7,9 @@ using UnityEngine.Rendering;
 // Menu: DeepCoo > Build Maze Scene
 public static class MazeBuilder
 {
-    // '#' = wall, '.' = floor. Row 0 is the north edge (top of the floor plan).
-    static readonly string[] Layout =
-    {
-        "###############",
-        "#.............#",
-        "#.#######.#####",
-        "#...#...#.....#",
-        "#.###.#.#####.#",
-        "#.#...#...#...#",
-        "#.#.#####.#.###",
-        "#.#.#...#.#...#",
-        "#.#.#.#.#.###.#",
-        "#.#.#.#.#...#.#",
-        "#.#.###.###.#.#",
-        "#.#...#.#...#.#",
-        "#####.#.#.###.#",
-        "#.....#.......#",
-        "###############",
-    };
+    static readonly string[] Layout = MazeLayout.Rows;
 
-    const float CellSize = 4f;
+    const float CellSize = MazeLayout.CellSize;
     const float WallHeight = 4.5f;
     const string ScenePath = "Assets/Scenes/Underground.unity";
 
@@ -163,7 +145,8 @@ public static class MazeBuilder
         Debug.Log($"[MazeBuilder] Built {ScenePath} ({cols}x{rows} cells, {walls.transform.childCount} wall blocks).");
     }
 
-    // Puts the rigged monster model at the spawn point, facing up the corridor (north).
+    // Puts the rigged monster model at the spawn point, facing up the corridor (north),
+    // with its wandering, walking and tentacle scripts.
     // Returns false when the model hasn't been imported, so the placeholder marker is used.
     static bool PlaceMonster(Vector3 position)
     {
@@ -173,6 +156,9 @@ public static class MazeBuilder
         var monster = (GameObject)PrefabUtility.InstantiatePrefab(model);
         monster.name = "PigeonMonster";
         monster.transform.SetPositionAndRotation(position, Quaternion.identity);
+        monster.AddComponent<MonsterWander>();
+        monster.AddComponent<MonsterGait>();
+        monster.AddComponent<TentacleWiggle>();
         return true;
     }
 
