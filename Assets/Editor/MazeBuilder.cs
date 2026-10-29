@@ -32,10 +32,10 @@ public static class MazeBuilder
     const string ScenePath = "Assets/Scenes/Underground.unity";
 
     // Wall texture set; one copy of the texture covers WallTileMeters x WallTileMeters of wall.
-    const string WallTextureFolder = "Assets/Textures/Walls/PlasteredWall05";
-    const string WallAlbedo = "plastered_wall_05_diff_2k.jpg";
-    const string WallNormal = "plastered_wall_05_nor_gl_2k.exr";
-    const string WallOcclusion = "plastered_wall_05_ao_2k.jpg";
+    const string WallTextureFolder = "Assets/Textures/Walls/SmoothConcrete";
+    const string WallAlbedo = "smooth_concrete_floor_diff_2k.jpg";
+    const string WallNormal = "smooth_concrete_floor_nor_gl_2k.exr";
+    const string WallOcclusion = "";
     const float WallTileMeters = 2f;
 
     // Marker positions in grid units (column, row), taken from the floor plan icons.
@@ -235,21 +235,23 @@ public static class MazeBuilder
         mat.SetColor("_BaseColor", Color.white);
         mat.color = Color.white;
         mat.SetFloat("_Smoothness", 0.15f);
-        if (normal != null)
-        {
-            mat.SetTexture("_BumpMap", normal);
-            mat.EnableKeyword("_NORMALMAP");
-        }
-        if (occlusion != null)
-        {
-            mat.SetTexture("_OcclusionMap", occlusion);
-            mat.EnableKeyword("_OCCLUSIONMAP");
-        }
+        mat.SetTexture("_BumpMap", normal);
+        mat.SetTexture("_OcclusionMap", occlusion);
+        SetKeyword(mat, "_NORMALMAP", normal != null);
+        SetKeyword(mat, "_OCCLUSIONMAP", occlusion != null);
         EditorUtility.SetDirty(mat);
+    }
+
+    static void SetKeyword(Material mat, string keyword, bool on)
+    {
+        if (on) mat.EnableKeyword(keyword);
+        else mat.DisableKeyword(keyword);
     }
 
     static Texture2D LoadTexture(string file, TextureImporterType type, bool sRGB)
     {
+        if (string.IsNullOrEmpty(file))
+            return null;
         string path = $"{WallTextureFolder}/{file}";
         if (AssetImporter.GetAtPath(path) is TextureImporter importer &&
             (importer.textureType != type || importer.sRGBTexture != sRGB))
