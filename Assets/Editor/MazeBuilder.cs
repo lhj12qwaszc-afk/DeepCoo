@@ -21,6 +21,7 @@ public static class MazeBuilder
     const float WallTileMeters = 2f;
 
     const string MonsterModelPath = "Assets/Characters/PigeonMonster/PigeonMonster.fbx";
+    const float MonsterScale = 1.4f;  // the model is ~2.6 m tall; this makes it ~3.6 m
 
     // Marker positions in grid units (column, row), taken from the floor plan icons.
     struct Marker
@@ -156,6 +157,7 @@ public static class MazeBuilder
         var monster = (GameObject)PrefabUtility.InstantiatePrefab(model);
         monster.name = "PigeonMonster";
         monster.transform.SetPositionAndRotation(position, Quaternion.identity);
+        monster.transform.localScale = Vector3.one * MonsterScale;
         monster.AddComponent<MonsterWander>();
         monster.AddComponent<MonsterSenses>();
         monster.AddComponent<MonsterGait>();

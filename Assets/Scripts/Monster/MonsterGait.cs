@@ -10,7 +10,7 @@ using UnityEngine;
 public class MonsterGait : MonoBehaviour
 {
     public MonsterWander mover;
-    public float strideLength = 1.4f;   // metres per full step cycle (both feet)
+    public float strideLength = 1.4f;   // metres per full step cycle (both feet), at scale 1
     public float legSwing = 24f;
     public float kneeBend = 40f;
     public float armSwing = 9f;
@@ -78,7 +78,9 @@ public class MonsterGait : MonoBehaviour
         float target = mover != null && mover.walkSpeed > 0f ? Mathf.Clamp01(speed / mover.walkSpeed) : 0f;
         walkBlend = Mathf.MoveTowards(walkBlend, target, Time.deltaTime * 2f);
         runBlend = Mathf.MoveTowards(runBlend, mover != null && mover.IsChasing ? 1f : 0f, Time.deltaTime * 2.5f);
-        float stride = Mathf.Lerp(strideLength, runStrideLength, runBlend);
+        // Distances are tuned for the model at scale 1; a bigger monster takes bigger steps.
+        float size = transform.lossyScale.y;
+        float stride = Mathf.Lerp(strideLength, runStrideLength, runBlend) * size;
         float swingAmount = Mathf.Lerp(legSwing, runLegSwing, runBlend);
         float kneeAmount = Mathf.Lerp(kneeBend, runKneeBend, runBlend);
         phase += speed / stride * Mathf.PI * 2f * Time.deltaTime;
@@ -95,7 +97,7 @@ public class MonsterGait : MonoBehaviour
         float s = Mathf.Sin(phase), c = Mathf.Cos(phase);
 
         // Body: hunched forward, bobbing and rolling with each step, slow breathing when still.
-        hips.position += up * (walkBlend * hipBob * (1f + runBlend) * (Mathf.Abs(c) - 0.5f) - runCrouch * runBlend);
+        hips.position += up * size * (walkBlend * hipBob * (1f + runBlend) * (Mathf.Abs(c) - 0.5f) - runCrouch * runBlend);
         Turn(hips, forward, walkBlend * 4f * s);
         Turn(hips, right, runLean * 0.4f * runBlend);
         float breath = Mathf.Sin(t * 1.3f) * 1.5f;

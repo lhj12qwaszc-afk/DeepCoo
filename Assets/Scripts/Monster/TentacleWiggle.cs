@@ -21,6 +21,7 @@ public class TentacleWiggle : MonoBehaviour
 
     [Header("Chase")]
     public float chaseStretch = 2.3f;    // bones lengthen so the tips can reach the floor
+    // distances below are metres at scale 1 and grow with the monster
     public float upperReach = 1.9f;      // how far ahead of the body the upper tentacles plant
     public float lowerReach = 1.0f;
     public float sideReach = 1.2f;
@@ -146,9 +147,11 @@ public class TentacleWiggle : MonoBehaviour
 
     void UpdateFoot(Chain chain, ref int stepping)
     {
+        float size = transform.lossyScale.y;
+        float stepLength = stepDistance * size;
         var desired = transform.position
-            + transform.forward * (chain.upper ? upperReach : lowerReach)
-            + transform.right * chain.side * sideReach;
+            + transform.forward * (chain.upper ? upperReach : lowerReach) * size
+            + transform.right * chain.side * sideReach * size;
         desired.y = transform.position.y;
 
         if (!chain.planted)
@@ -160,11 +163,11 @@ public class TentacleWiggle : MonoBehaviour
         }
 
         if (chain.stepT >= 1f && stepping < maxSteppingAtOnce
-            && Vector3.Distance(chain.foot, desired) > stepDistance)
+            && Vector3.Distance(chain.foot, desired) > stepLength)
         {
             chain.stepFrom = chain.foot;
             // land a bit beyond the ideal spot so the tentacle stays planted for a while
-            chain.stepTo = desired + transform.forward * stepDistance * 0.5f;
+            chain.stepTo = desired + transform.forward * stepLength * 0.5f;
             chain.stepT = 0f;
             stepping++;
         }
@@ -173,7 +176,7 @@ public class TentacleWiggle : MonoBehaviour
         {
             chain.stepT = Mathf.Min(1f, chain.stepT + Time.deltaTime / stepDuration);
             chain.foot = Vector3.Lerp(chain.stepFrom, chain.stepTo, chain.stepT)
-                + Vector3.up * liftHeight * Mathf.Sin(chain.stepT * Mathf.PI);
+                + Vector3.up * liftHeight * size * Mathf.Sin(chain.stepT * Mathf.PI);
         }
     }
 

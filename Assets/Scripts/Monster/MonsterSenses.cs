@@ -12,8 +12,8 @@ public class MonsterSenses : MonoBehaviour
     public float[] hearingRange = { 0f, 3f, 9f, 20f };
     public float sightRange = 22f;
     public float sightAngle = 75f;      // half-angle either side of where it faces
-    public float eyeHeight = 2.2f;
-    public float catchDistance = 1.3f;
+    public float eyeHeight = 2.2f;      // at scale 1; grows with the monster
+    public float catchDistance = 1.3f;  // at scale 1; a bigger monster grabs from further away
 
     FirstPersonController player;
     Transform playerEye;
@@ -40,7 +40,7 @@ public class MonsterSenses : MonoBehaviour
         toPlayer.y = 0f;
         float distance = toPlayer.magnitude;
 
-        if (mover.IsChasing && distance < catchDistance)
+        if (mover.IsChasing && distance < catchDistance * transform.lossyScale.y)
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
             return;
@@ -60,7 +60,7 @@ public class MonsterSenses : MonoBehaviour
     {
         if (distance > sightRange || Vector3.Angle(transform.forward, toPlayer) > sightAngle)
             return false;
-        var eye = transform.position + Vector3.up * eyeHeight;
+        var eye = transform.position + Vector3.up * eyeHeight * transform.lossyScale.y;
         if (Physics.Linecast(eye, playerEye.position, out var hit, ~0, QueryTriggerInteraction.Ignore))
             return hit.transform == player.transform || hit.transform.IsChildOf(player.transform);
         return true;
