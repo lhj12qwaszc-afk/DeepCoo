@@ -31,6 +31,13 @@ public static class MazeBuilder
     const float WallHeight = 4.5f;
     const string ScenePath = "Assets/Scenes/Underground.unity";
 
+    // Wall texture set; one copy of the texture covers WallTileMeters x WallTileMeters of wall.
+    const string WallTextureFolder = "Assets/Textures/Walls/PlasteredWall05";
+    const string WallAlbedo = "plastered_wall_05_diff_2k.jpg";
+    const string WallNormal = "plastered_wall_05_nor_gl_2k.exr";
+    const string WallOcclusion = "plastered_wall_05_ao_2k.jpg";
+    const float WallTileMeters = 2f;
+
     // Marker positions in grid units (column, row), taken from the floor plan icons.
     struct Marker
     {
@@ -52,6 +59,11 @@ public static class MazeBuilder
     [MenuItem("DeepCoo/Build Maze Scene")]
     public static void Build()
     {
+        if (EditorApplication.isPlaying)
+        {
+            Debug.LogWarning("[MazeBuilder] Stop Play mode before building the maze.");
+            return;
+        }
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             return;
 
@@ -64,6 +76,7 @@ public static class MazeBuilder
 
         var floorMat = CreateMaterial("Maze_Floor", new Color(0.22f, 0.21f, 0.2f));
         var wallMat = CreateMaterial("Maze_Wall", new Color(0.38f, 0.37f, 0.35f));
+        ApplyWallTextures(wallMat);
         var ceilingMat = CreateMaterial("Maze_Ceiling", new Color(0.15f, 0.15f, 0.15f));
 
         var root = new GameObject("Maze");
@@ -104,6 +117,7 @@ public static class MazeBuilder
                 wall.transform.localPosition = new Vector3((start + length / 2f) * CellSize, WallHeight / 2f, -(r + 0.5f) * CellSize);
                 wall.transform.localScale = new Vector3(length * CellSize, WallHeight, CellSize);
                 wall.GetComponent<Renderer>().sharedMaterial = wallMat;
+                ApplyWorldUVs(wall);
                 GameObjectUtility.SetStaticEditorFlags(wall, StaticEditorFlags.BatchingStatic | StaticEditorFlags.ContributeGI);
             }
         }
@@ -180,6 +194,71 @@ public static class MazeBuilder
 
         fps.cameraRoot = camGo.transform;
         fps.flashlight = flashlight;
+    }
+
+    // Replaces the cube's 0..1 UVs with world-space UVs so the texture keeps the same
+    // size on every wall block and lines up across neighbouring blocks.
+    static void ApplyWorldUVs(GameObject wall)
+    {
+        var filter = wall.GetComponent<MeshFilter>();
+        var mesh = Object.Instantiate(filter.sharedMesh);
+        mesh.name = wall.name + "_Mesh";
+
+        var t = wall.transform;
+        var vertices = mesh.vertices;
+        var normals = mesh.normals;
+        var uvs = new Vector2[vertices.Length];
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            var p = t.TransformPoint(vertices[i]);
+            var n = normals[i];
+            Vector2 uv;
+            if (Mathf.Abs(n.x) > 0.5f) uv = new Vector2(p.z, p.y);
+            else if (Mathf.Abs(n.y) > 0.5f) uv = new Vector2(p.x, p.z);
+            else uv = new Vector2(p.x, p.y);
+            uvs[i] = uv / WallTileMeters;
+        }
+        mesh.uv = uvs;
+        mesh.RecalculateTangents();
+        filter.sharedMesh = mesh;
+    }
+
+    static void ApplyWallTextures(Material mat)
+    {
+        var albedo = LoadTexture(WallAlbedo, TextureImporterType.Default, true);
+        var normal = LoadTexture(WallNormal, TextureImporterType.NormalMap, false);
+        var occlusion = LoadTexture(WallOcclusion, TextureImporterType.Default, false);
+        if (albedo == null)
+            return;
+
+        mat.SetTexture("_BaseMap", albedo);
+        mat.SetColor("_BaseColor", Color.white);
+        mat.color = Color.white;
+        mat.SetFloat("_Smoothness", 0.15f);
+        if (normal != null)
+        {
+            mat.SetTexture("_BumpMap", normal);
+            mat.EnableKeyword("_NORMALMAP");
+        }
+        if (occlusion != null)
+        {
+            mat.SetTexture("_OcclusionMap", occlusion);
+            mat.EnableKeyword("_OCCLUSIONMAP");
+        }
+        EditorUtility.SetDirty(mat);
+    }
+
+    static Texture2D LoadTexture(string file, TextureImporterType type, bool sRGB)
+    {
+        string path = $"{WallTextureFolder}/{file}";
+        if (AssetImporter.GetAtPath(path) is TextureImporter importer &&
+            (importer.textureType != type || importer.sRGBTexture != sRGB))
+        {
+            importer.textureType = type;
+            importer.sRGBTexture = sRGB;
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 
     static Material CreateMaterial(string name, Color color)
