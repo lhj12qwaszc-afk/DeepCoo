@@ -27,7 +27,7 @@ public static class MazeBuilder
         "###############",
     };
 
-    const float CellSize = 3f;
+    const float CellSize = 4f;
     const float WallHeight = 4.5f;
     const string ScenePath = "Assets/Scenes/Underground.unity";
 
