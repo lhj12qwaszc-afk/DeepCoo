@@ -38,6 +38,8 @@ public static class MazeBuilder
     const string WallOcclusion = "";
     const float WallTileMeters = 2f;
 
+    const string MonsterModelPath = "Assets/Characters/PigeonMonster/PigeonMonster.fbx";
+
     // Marker positions in grid units (column, row), taken from the floor plan icons.
     struct Marker
     {
@@ -126,6 +128,8 @@ public static class MazeBuilder
         markers.transform.SetParent(root.transform);
         foreach (var m in Markers)
         {
+            if (m.Name == "MonsterSpawn" && PlaceMonster(new Vector3(m.Col * CellSize, 0f, -m.Row * CellSize)))
+                continue;
             var go = GameObject.CreatePrimitive(m.Shape);
             go.name = m.Name;
             go.transform.SetParent(markers.transform);
@@ -157,6 +161,19 @@ public static class MazeBuilder
         AddSceneToBuildSettings(ScenePath);
         Selection.activeGameObject = root;
         Debug.Log($"[MazeBuilder] Built {ScenePath} ({cols}x{rows} cells, {walls.transform.childCount} wall blocks).");
+    }
+
+    // Puts the rigged monster model at the spawn point, facing up the corridor (north).
+    // Returns false when the model hasn't been imported, so the placeholder marker is used.
+    static bool PlaceMonster(Vector3 position)
+    {
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>(MonsterModelPath);
+        if (model == null)
+            return false;
+        var monster = (GameObject)PrefabUtility.InstantiatePrefab(model);
+        monster.name = "PigeonMonster";
+        monster.transform.SetPositionAndRotation(position, Quaternion.identity);
+        return true;
     }
 
     static void CreatePlayer(Marker spawn)
