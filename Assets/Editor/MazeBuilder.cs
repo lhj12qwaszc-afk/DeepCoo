@@ -28,7 +28,7 @@ public static class MazeBuilder
     };
 
     const float CellSize = 3f;
-    const float WallHeight = 3f;
+    const float WallHeight = 4.5f;
     const string ScenePath = "Assets/Scenes/Underground.unity";
 
     // Marker positions in grid units (column, row), taken from the floor plan icons.
