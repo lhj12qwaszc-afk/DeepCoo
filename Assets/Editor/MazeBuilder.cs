@@ -137,21 +137,49 @@ public static class MazeBuilder
         light.color = new Color(0.7f, 0.75f, 0.9f);
         lightGo.transform.rotation = Quaternion.Euler(60f, -30f, 0f);
 
-        var spawn = Markers[0];
-        var camGo = new GameObject("Main Camera");
-        camGo.tag = "MainCamera";
-        var cam = camGo.AddComponent<Camera>();
-        cam.nearClipPlane = 0.05f;
-        cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = Color.black;
-        camGo.AddComponent<AudioListener>();
-        camGo.transform.position = new Vector3(spawn.Col * CellSize, 1.6f, -spawn.Row * CellSize);
-        camGo.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+        CreatePlayer(Markers[0]);
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         AddSceneToBuildSettings(ScenePath);
         Selection.activeGameObject = root;
         Debug.Log($"[MazeBuilder] Built {ScenePath} ({cols}x{rows} cells, {walls.transform.childCount} wall blocks).");
+    }
+
+    static void CreatePlayer(Marker spawn)
+    {
+        var player = new GameObject("Player");
+        player.transform.position = new Vector3(spawn.Col * CellSize, 0f, -spawn.Row * CellSize);
+        player.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+        var controller = player.AddComponent<CharacterController>();
+        controller.radius = 0.35f;
+        controller.stepOffset = 0.3f;
+        var fps = player.AddComponent<FirstPersonController>();
+
+        var camGo = new GameObject("Main Camera");
+        camGo.tag = "MainCamera";
+        camGo.transform.SetParent(player.transform, false);
+        camGo.transform.localPosition = new Vector3(0f, fps.standEyeHeight, 0f);
+        var cam = camGo.AddComponent<Camera>();
+        cam.nearClipPlane = 0.05f;
+        cam.fieldOfView = 70f;
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = Color.black;
+        camGo.AddComponent<AudioListener>();
+
+        var flashGo = new GameObject("Flashlight");
+        flashGo.transform.SetParent(camGo.transform, false);
+        flashGo.transform.localPosition = new Vector3(0.2f, -0.15f, 0.1f);
+        var flashlight = flashGo.AddComponent<Light>();
+        flashlight.type = LightType.Spot;
+        flashlight.range = 18f;
+        flashlight.spotAngle = 55f;
+        flashlight.innerSpotAngle = 30f;
+        flashlight.intensity = 4f;
+        flashlight.color = new Color(1f, 0.95f, 0.85f);
+        flashlight.shadows = LightShadows.Soft;
+
+        fps.cameraRoot = camGo.transform;
+        fps.flashlight = flashlight;
     }
 
     static Material CreateMaterial(string name, Color color)
