@@ -304,6 +304,9 @@ public static class MazeBuilder
         fps.cameraRoot = camGo.transform;
         fps.flashlight = flashlight;
         player.AddComponent<FlashlightBattery>().flashlight = flashlight;
+        var dread = player.AddComponent<MonsterProximityFX>();
+        dread.cameraRoot = camGo.transform;
+        dread.flashlight = flashlight;
     }
 
     static void CreateBatterySpawner()
