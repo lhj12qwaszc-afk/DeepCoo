@@ -263,6 +263,7 @@ public static class MazeBuilder
         controller.stepOffset = 0.3f;
         var fps = player.AddComponent<FirstPersonController>();
         player.AddComponent<PlayerInteractor>();
+        player.AddComponent<MicrophoneNoise>();
 
         var camGo = new GameObject("Main Camera");
         camGo.tag = "MainCamera";
