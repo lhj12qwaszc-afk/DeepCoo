@@ -22,6 +22,8 @@ public static class MazeBuilder
 
     const string MonsterModelPath = "Assets/Characters/PigeonMonster/PigeonMonster.fbx";
     const float MonsterScale = 1.6f;  // the model is ~2.6 m tall; this makes it ~4.1 m
+    const string FlashlightModelPath = "Assets/Props/Flashlight/Flashlight.fbx";
+    const string BatteryModelPath = "Assets/Props/Battery/Battery.fbx";
 
     // Marker positions in grid units (column, row), taken from the floor plan icons.
     struct Marker
@@ -139,6 +141,7 @@ public static class MazeBuilder
         lightGo.transform.rotation = Quaternion.Euler(60f, -30f, 0f);
 
         CreatePlayer(Markers[0]);
+        CreateBatterySpawner();
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         AddSceneToBuildSettings(ScenePath);
@@ -186,9 +189,23 @@ public static class MazeBuilder
         cam.backgroundColor = Color.black;
         camGo.AddComponent<AudioListener>();
 
+        // The flashlight held low in the right hand; the beam comes out just past its lens.
+        var hand = new GameObject("FlashlightHand");
+        hand.transform.SetParent(camGo.transform, false);
+        hand.transform.localPosition = new Vector3(0.2f, -0.2f, 0.28f);
+        hand.transform.localRotation = Quaternion.Euler(4f, -6f, 0f);
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>(FlashlightModelPath);
+        if (model != null)
+        {
+            var held = (GameObject)PrefabUtility.InstantiatePrefab(model);
+            held.transform.SetParent(hand.transform, false);
+            foreach (var r in held.GetComponentsInChildren<Renderer>())
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
         var flashGo = new GameObject("Flashlight");
-        flashGo.transform.SetParent(camGo.transform, false);
-        flashGo.transform.localPosition = new Vector3(0.2f, -0.15f, 0.1f);
+        flashGo.transform.SetParent(hand.transform, false);
+        flashGo.transform.localPosition = new Vector3(0f, 0f, 0.14f);
         var flashlight = flashGo.AddComponent<Light>();
         flashlight.type = LightType.Spot;
         flashlight.range = 18f;
@@ -200,6 +217,16 @@ public static class MazeBuilder
 
         fps.cameraRoot = camGo.transform;
         fps.flashlight = flashlight;
+        player.AddComponent<FlashlightBattery>().flashlight = flashlight;
+    }
+
+    static void CreateBatterySpawner()
+    {
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>(BatteryModelPath);
+        if (model == null)
+            return;
+        var spawner = new GameObject("BatterySpawner").AddComponent<BatterySpawner>();
+        spawner.batteryModel = model;
     }
 
     // Replaces the cube's 0..1 UVs with world-space UVs so the texture keeps the same
