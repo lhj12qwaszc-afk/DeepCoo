@@ -19,6 +19,8 @@ public class PlayerInteractor : MonoBehaviour
     float holdTime;
     bool holding;
 
+    public HidingSpot HiddenIn => hiddenIn;
+
     void Awake() => fps = GetComponent<FirstPersonController>();
 
     void Update()
