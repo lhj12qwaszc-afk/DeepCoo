@@ -120,6 +120,8 @@ public static class MazeBuilder
                 box.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-outward, Vector3.up));
                 box.transform.localScale = spec.Size;
                 box.GetComponent<Renderer>().sharedMaterial = mat;
+                if (System.Enum.TryParse<HidingSpot.Kind>(spec.Name, out var kind))
+                    box.AddComponent<HidingSpot>().kind = kind;
             }
         }
     }
@@ -260,6 +262,7 @@ public static class MazeBuilder
         controller.radius = 0.35f;
         controller.stepOffset = 0.3f;
         var fps = player.AddComponent<FirstPersonController>();
+        player.AddComponent<PlayerInteractor>();
 
         var camGo = new GameObject("Main Camera");
         camGo.tag = "MainCamera";

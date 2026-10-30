@@ -3,8 +3,9 @@ using UnityEngine.SceneManagement;
 
 // The monster's hearing and sight. Hearing range depends on how loud the player is right now
 // (FirstPersonController.CurrentNoise); sight needs the player in front and not behind a wall.
-// Either one makes the monster chase. Getting caught restarts the level from scratch,
-// which is the game's one-life rule.
+// Either one makes the monster chase, as do loud one-off noises (NoiseEvents) within their
+// range. A player hiding in a locker, wardrobe or bin can't be seen, heard or caught.
+// Getting caught restarts the level from scratch, which is the game's one-life rule.
 public class MonsterSenses : MonoBehaviour
 {
     public MonsterWander mover;
@@ -31,9 +32,20 @@ public class MonsterSenses : MonoBehaviour
             playerEye = player.cameraRoot != null ? player.cameraRoot : player.transform;
     }
 
+    void OnEnable() => NoiseEvents.Emitted += OnNoise;
+    void OnDisable() => NoiseEvents.Emitted -= OnNoise;
+
+    void OnNoise(Vector3 position, float range)
+    {
+        var offset = position - transform.position;
+        offset.y = 0f;
+        if (offset.magnitude <= range)
+            mover.Pursue(position);
+    }
+
     void Update()
     {
-        if (player == null)
+        if (player == null || player.IsHidden)
             return;
 
         var toPlayer = player.transform.position - transform.position;

@@ -3,6 +3,8 @@ using UnityEngine.InputSystem;
 
 // First-person movement: WASD to move, mouse to look, Shift to sprint,
 // C / Left Ctrl to crouch, F to toggle the flashlight, Esc to free the cursor.
+// While hidden (EnterHiding) the player stands still inside the hiding spot and can only
+// turn their head a little.
 [RequireComponent(typeof(CharacterController))]
 public class FirstPersonController : MonoBehaviour
 {
@@ -30,12 +32,20 @@ public class FirstPersonController : MonoBehaviour
     public float crouchEyeHeight = 0.85f;
     public float crouchTransitionSpeed = 8f;
 
+    [Header("Hiding")]
+    public float hiddenYawLimit = 35f;
+    public float hiddenPitchLimit = 20f;
+
     public NoiseLevel CurrentNoise { get; private set; }
     public bool IsCrouching { get; private set; }
+    public bool IsHidden { get; private set; }
 
     CharacterController controller;
     float pitch;
     float verticalVelocity;
+    float hiddenYaw;
+    Quaternion hiddenFacing;
+    bool flashlightWasOn;
 
     void Awake()
     {
@@ -58,6 +68,14 @@ public class FirstPersonController : MonoBehaviour
         else if (mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
             LockCursor(true);
 
+        if (IsHidden)
+        {
+            if (Cursor.lockState == CursorLockMode.Locked)
+                LookWhileHidden(mouse.delta.ReadValue());
+            CurrentNoise = NoiseLevel.Silent;
+            return;
+        }
+
         if (Cursor.lockState == CursorLockMode.Locked)
             Look(mouse.delta.ReadValue());
 
@@ -75,6 +93,50 @@ public class FirstPersonController : MonoBehaviour
     {
         transform.Rotate(0f, delta.x * mouseSensitivity, 0f);
         pitch = Mathf.Clamp(pitch - delta.y * mouseSensitivity, -maxLookAngle, maxLookAngle);
+        cameraRoot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+    }
+
+    // Steps inside a hiding spot: the player's feet go to standPoint, facing out of the spot.
+    public void EnterHiding(Vector3 standPoint, Quaternion facing)
+    {
+        IsHidden = true;
+        IsCrouching = false;
+        controller.enabled = false;
+        transform.SetPositionAndRotation(standPoint, facing);
+        hiddenFacing = facing;
+        hiddenYaw = 0f;
+        pitch = 0f;
+        cameraRoot.localRotation = Quaternion.identity;
+        var eye = cameraRoot.localPosition;
+        eye.y = standEyeHeight;
+        cameraRoot.localPosition = eye;
+        if (flashlight != null)
+        {
+            flashlightWasOn = flashlight.enabled;
+            flashlight.enabled = false;
+            // put the held flashlight away so it doesn't poke out through the door
+            flashlight.transform.parent.gameObject.SetActive(false);
+        }
+        CurrentNoise = NoiseLevel.Silent;
+    }
+
+    public void ExitHiding(Vector3 standPoint)
+    {
+        transform.position = standPoint;
+        controller.enabled = true;
+        IsHidden = false;
+        if (flashlight != null)
+        {
+            flashlight.transform.parent.gameObject.SetActive(true);
+            flashlight.enabled = flashlightWasOn;
+        }
+    }
+
+    void LookWhileHidden(Vector2 delta)
+    {
+        hiddenYaw = Mathf.Clamp(hiddenYaw + delta.x * mouseSensitivity, -hiddenYawLimit, hiddenYawLimit);
+        pitch = Mathf.Clamp(pitch - delta.y * mouseSensitivity, -hiddenPitchLimit, hiddenPitchLimit);
+        transform.rotation = hiddenFacing * Quaternion.Euler(0f, hiddenYaw, 0f);
         cameraRoot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
