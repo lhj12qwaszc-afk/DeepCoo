@@ -60,9 +60,10 @@ public static class MazeBuilder
 
     static readonly PropSpec[] PropSpecs =
     {
-        new PropSpec { Name = "Locker",        Count = 3, Size = new Vector3(0.5f, 1.9f, 0.5f),    Color = HideColor },
-        new PropSpec { Name = "Wardrobe",      Count = 2, Size = new Vector3(1.2f, 2.0f, 0.6f),    Color = HideColor },
-        new PropSpec { Name = "TrashBin",      Count = 2, Size = new Vector3(1.0f, 1.2f, 0.8f),    Color = HideColor },
+        // hiding spots are half the wall height (2.25 m), keeping their proportions
+        new PropSpec { Name = "Locker",        Count = 3, Size = new Vector3(0.6f, 2.25f, 0.6f),   Color = HideColor },
+        new PropSpec { Name = "Wardrobe",      Count = 2, Size = new Vector3(1.35f, 2.25f, 0.68f), Color = HideColor },
+        new PropSpec { Name = "TrashBin",      Count = 2, Size = new Vector3(1.88f, 2.25f, 1.5f),  Color = HideColor },
         new PropSpec { Name = "FilingCabinet", Count = 2, Size = new Vector3(0.5f, 1.35f, 0.65f),  Color = ClueColor },
         new PropSpec { Name = "CorkBoard",     Count = 1, Size = new Vector3(1.2f, 0.9f, 0.05f),   Elevation = 1.1f, Color = ClueColor },
         new PropSpec { Name = "PipeGauge",     Count = 2, Size = new Vector3(1.0f, 0.5f, 0.3f),    Elevation = 0.9f, Color = PuzzleColor },
