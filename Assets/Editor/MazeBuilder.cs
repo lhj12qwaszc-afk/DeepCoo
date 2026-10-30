@@ -43,6 +43,86 @@ public static class MazeBuilder
         new Marker { Name = "ExitDoor",       Col = 13.5f, Row = 1.5f,  Color = new Color(0.2f, 0.9f, 0.4f),  Shape = PrimitiveType.Cube },
     };
 
+    // Placeholder boxes for furniture whose models aren't made yet: real-world size, standing
+    // against a wall and facing into the corridor. Swap in the real models later.
+    struct PropSpec
+    {
+        public string Name;
+        public int Count;
+        public Vector3 Size;      // width, height, depth (depth runs away from the wall)
+        public float Elevation;   // bottom edge above the floor (wall-mounted items)
+        public Color Color;
+    }
+
+    static readonly Color HideColor = new Color(0.25f, 0.45f, 0.85f);   // hiding spots
+    static readonly Color ClueColor = new Color(0.9f, 0.75f, 0.2f);     // places clues are kept
+    static readonly Color PuzzleColor = new Color(0.9f, 0.45f, 0.15f);  // puzzle objects
+
+    static readonly PropSpec[] PropSpecs =
+    {
+        new PropSpec { Name = "Locker",        Count = 3, Size = new Vector3(0.5f, 1.9f, 0.5f),    Color = HideColor },
+        new PropSpec { Name = "Wardrobe",      Count = 2, Size = new Vector3(1.2f, 2.0f, 0.6f),    Color = HideColor },
+        new PropSpec { Name = "TrashBin",      Count = 2, Size = new Vector3(1.0f, 1.2f, 0.8f),    Color = HideColor },
+        new PropSpec { Name = "FilingCabinet", Count = 2, Size = new Vector3(0.5f, 1.35f, 0.65f),  Color = ClueColor },
+        new PropSpec { Name = "CorkBoard",     Count = 1, Size = new Vector3(1.2f, 0.9f, 0.05f),   Elevation = 1.1f, Color = ClueColor },
+        new PropSpec { Name = "PipeGauge",     Count = 2, Size = new Vector3(1.0f, 0.5f, 0.3f),    Elevation = 0.9f, Color = PuzzleColor },
+        new PropSpec { Name = "Birdcage",      Count = 2, Size = new Vector3(0.5f, 0.7f, 0.5f),    Color = PuzzleColor },
+        new PropSpec { Name = "Radio",         Count = 1, Size = new Vector3(0.35f, 0.22f, 0.12f), Color = PuzzleColor },
+    };
+
+    // Fixed layout so the props stay put between rebuilds; change the seed to reshuffle.
+    const int PropSeed = 7;
+
+    static void PlacePropPlaceholders(Transform parent)
+    {
+        var steps = new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+        var reserved = new System.Collections.Generic.HashSet<Vector2Int>();
+        foreach (var m in Markers)
+            reserved.Add(new Vector2Int(Mathf.FloorToInt(m.Col), Mathf.FloorToInt(m.Row)));
+
+        // every (floor cell, wall side) pair, in a fixed shuffled order
+        var spots = new System.Collections.Generic.List<(Vector2Int cell, Vector2Int side)>();
+        foreach (var cell in MazeLayout.FloorCells())
+            foreach (var step in steps)
+                if (!reserved.Contains(cell) && !MazeLayout.IsFloor(cell + step))
+                    spots.Add((cell, step));
+        var rng = new System.Random(PropSeed);
+        for (int i = spots.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (spots[i], spots[j]) = (spots[j], spots[i]);
+        }
+
+        var root = new GameObject("PropPlaceholders").transform;
+        root.SetParent(parent);
+        var used = new System.Collections.Generic.HashSet<Vector2Int>();
+        int next = 0;
+        foreach (var spec in PropSpecs)
+        {
+            var mat = CreateMaterial("Placeholder_" + spec.Name, spec.Color);
+            for (int n = 0; n < spec.Count && next < spots.Count; next++)
+            {
+                var (cell, side) = spots[next];
+                if (used.Contains(cell))
+                    continue;   // one prop per cell keeps corridors passable
+                used.Add(cell);
+                n++;
+
+                // MazeLayout rows grow southward (-Z), so a grid step (x, y) is world (x, 0, -y).
+                var outward = new Vector3(side.x, 0f, -side.y);
+                var pos = MazeLayout.CellCenter(cell) + outward * (CellSize / 2f - spec.Size.z / 2f - 0.02f);
+                pos.y = spec.Elevation + spec.Size.y / 2f;
+
+                var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                box.name = $"{spec.Name}_{n}";
+                box.transform.SetParent(root);
+                box.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-outward, Vector3.up));
+                box.transform.localScale = spec.Size;
+                box.GetComponent<Renderer>().sharedMaterial = mat;
+            }
+        }
+    }
+
     [MenuItem("DeepCoo/Build Maze Scene")]
     public static void Build()
     {
@@ -124,6 +204,8 @@ public static class MazeBuilder
             Object.DestroyImmediate(go.GetComponent<Collider>());
             go.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Marker_" + m.Name, m.Color);
         }
+
+        PlacePropPlaceholders(root.transform);
 
         // Dim, cold lighting for an underground space.
         RenderSettings.ambientMode = AmbientMode.Flat;
