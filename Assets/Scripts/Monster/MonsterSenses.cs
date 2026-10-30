@@ -63,7 +63,8 @@ public class MonsterSenses : MonoBehaviour
                 var s = spot.transform;
                 var stand = s.position + s.forward * (s.localScale.z / 2f + inspectDistance * transform.lossyScale.y);
                 stand.y = transform.position.y;
-                mover.Investigate(stand, s.position);
+                // face stops just outside the door
+                mover.Investigate(stand, s.position, s.localScale.z / 2f + 0.6f);
             }
             return;
         }

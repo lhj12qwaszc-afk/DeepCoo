@@ -23,6 +23,8 @@ public class MonsterWander : MonoBehaviour
     public bool IsChasing { get; private set; }
     public bool IsInspecting { get; private set; }
     public bool IsInvestigating => investigating;
+    public Vector3 InspectLook => inspectLook;
+    public float InspectFaceGap { get; private set; }   // how far from inspectLook the face should stop
 
     bool investigating;
     Vector3 inspectStand, inspectLook;
@@ -56,12 +58,14 @@ public class MonsterWander : MonoBehaviour
         }
     }
 
-    // Walk to standPoint, then crouch and stare at lookPoint for inspectSeconds.
-    public void Investigate(Vector3 standPoint, Vector3 lookPoint)
+    // Walk to standPoint, then crouch and stare at lookPoint for inspectSeconds, bringing the
+    // face to faceGap metres from lookPoint.
+    public void Investigate(Vector3 standPoint, Vector3 lookPoint, float faceGap)
     {
         if (investigating)
             return;
         investigating = true;
+        InspectFaceGap = faceGap;
         IsChasing = false;
         IsInspecting = false;
         inspectStand = standPoint;

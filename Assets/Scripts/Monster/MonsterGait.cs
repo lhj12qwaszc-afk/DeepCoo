@@ -4,7 +4,8 @@ using UnityEngine;
 // hunched spine, long legs stepping, limp dangling arms, a pigeon-like head bob while
 // walking, and sudden jerky head turns while standing still. While chasing it drops low,
 // leans far forward, takes long strides and reaches ahead with its arms. While inspecting a
-// hiding spot it squats in front of it and peers in, snapping its head from side to side.
+// hiding spot it kneels in front of it and bends down until its face is at the slats, peering
+// in and snapping its head from side to side.
 // Bones are reset to their bind pose every frame and then rotated around the monster's
 // own axes, parents before children.
 [DefaultExecutionOrder(100)]
@@ -28,10 +29,13 @@ public class MonsterGait : MonoBehaviour
     public float runArmReach = 40f;     // arms thrust forward
 
     [Header("Inspecting a hiding spot")]
-    public float squatThigh = 55f;      // thighs forward
-    public float squatKnee = 95f;
-    public float squatDrop = 0.32f;     // metres the hips drop at scale 1 (matches the leg angles)
-    public float peerLean = 30f;        // spine leans in toward the door
+    public float squatThigh = 10f;      // kneeling: thighs nearly upright
+    public float squatKnee = 100f;      // shins folded back along the floor
+    public float squatDrop = 0.56f;     // metres the hips drop at scale 1 (one leg length + foot)
+    public float peerLean = 45f;        // spine leans in toward the door
+    public float peerHeadHeight = 1.35f; // world metres (head bone): bends further until the eyes are at the slats
+    public float faceGlow = 0.9f;        // faint light on the face so it shows through the slats
+    public float peerEyeHeight = 1.6f;   // the face aims at this height (the hidden player's eyes)
 
     Animator animator;
     Transform hips, spine, chest, upperChest, neck, head;
@@ -47,6 +51,8 @@ public class MonsterGait : MonoBehaviour
     float inspectBlend;
     float headYaw, headYawTarget, nextHeadTwitch;
     float headCock, headCockTarget, nextCock;
+    Light glow;
+    Vector3 headFaceLocal;   // which way the face points, in the head bone's space
 
     void Awake()
     {
@@ -74,9 +80,21 @@ public class MonsterGait : MonoBehaviour
             if (all[i] != null)
                 bindRotations[i] = all[i].localRotation;
         hipsBindPosition = hips.localPosition;
+        // in the bind pose the face looks along the monster's forward
+        headFaceLocal = Quaternion.Inverse(head.rotation) * transform.forward;
 
         // Bones are driven from code, so the Animator must not write over them.
         animator.enabled = false;
+
+        // A cold, dim light just in front of the face, only while peering into a hiding spot.
+        glow = new GameObject("FaceGlow").AddComponent<Light>();
+        glow.transform.SetParent(head, false);
+        glow.transform.position = head.position + transform.forward * 0.5f * transform.lossyScale.y + Vector3.up * 0.1f;
+        glow.type = LightType.Point;
+        glow.range = 1.6f;
+        glow.color = new Color(0.75f, 0.8f, 0.95f);
+        glow.shadows = LightShadows.None;
+        glow.enabled = false;
     }
 
     Transform Bone(HumanBodyBones b) => animator.GetBoneTransform(b);
@@ -141,6 +159,24 @@ public class MonsterGait : MonoBehaviour
             Turn(hand[side], right, -8f * Mathf.Sin(phase - 1.4f) * sign * walkBlend);
         }
 
+        // Peering: keep bending at the waist until the face is down at the hiding spot's slats.
+        float extraBend = 0f;
+        if (ib > 0.01f)
+        {
+            float targetY = Mathf.Lerp(head.position.y, peerHeadHeight, ib);
+            while (head.position.y > targetY && extraBend < 120f)
+            {
+                Turn(spine, right, 2f);
+                Turn(chest, right, 1f);
+                extraBend += 3f;
+            }
+            // Shuffle the whole body back or forward so the face stops just outside the door.
+            var toDoor = mover.InspectLook - head.position;
+            toDoor.y = 0f;
+            float overshoot = mover.InspectFaceGap - toDoor.magnitude;
+            hips.position -= toDoor.normalized * overshoot * ib;
+        }
+
         // Head: pigeon bob twice per stride while walking; sudden twitchy turns while standing.
         if (Time.time >= nextHeadTwitch)
         {
@@ -158,10 +194,37 @@ public class MonsterGait : MonoBehaviour
         float peck = Mathf.Max(0f, Mathf.Sin(t * 5f)) * 6f;
         float bob = Mathf.Sin(phase * 2f) * headBob * walkBlend * (1f - 0.5f * runBlend);
         // keep the eyes on the corridor ahead despite the lean
-        Turn(neck, right, -hunch * 0.8f + bob - runLean * 0.9f * runBlend + (peck - peerLean * 0.5f) * ib);
+        // while peering, tip the head back up so the face looks straight through the slats
+        Turn(neck, right, -hunch * 0.8f + bob - runLean * 0.9f * runBlend + (peck - peerLean * 0.8f) * ib - extraBend * 0.6f);
+        Turn(head, right, -extraBend * 0.3f);
         Turn(head, right, -bob * 0.8f);
         Turn(head, up, headYaw);
-        Turn(head, forward, Mathf.Sin(t * 0.7f) * 4f * (1f - walkBlend) * (1f - ib) + headCock * ib);
+        Turn(head, forward, Mathf.Sin(t * 0.7f) * 4f * (1f - walkBlend) * (1f - ib));
+
+        // Still too tall once the neck has tipped the face up: sink the whole kneeling body. Only the
+        // face is visible from inside the hiding spot, so the folded legs dipping into the floor
+        // can't be seen.
+        if (ib > 0.01f)
+        {
+            float remaining = head.position.y - Mathf.Lerp(head.position.y, peerHeadHeight, ib);
+            if (remaining > 0f)
+                hips.position -= up * Mathf.Min(remaining, 0.6f * size);
+        }
+
+        // Turn the face to stare straight through the slats at eye height, then cock it like a pigeon.
+        if (ib > 0.01f)
+        {
+            var eyeTarget = mover.InspectLook;
+            eyeTarget.y = peerEyeHeight;
+            var want = (eyeTarget - head.position).normalized;
+            var face = head.rotation * headFaceLocal;
+            var aim = Quaternion.FromToRotation(face, want);
+            head.rotation = Quaternion.Slerp(Quaternion.identity, aim, ib) * head.rotation;
+            head.rotation = Quaternion.AngleAxis(headCock * ib, want) * head.rotation;
+        }
+
+        glow.intensity = faceGlow * ib;
+        glow.enabled = ib > 0.01f;
     }
 
     static void Turn(Transform bone, Vector3 axis, float degrees)
