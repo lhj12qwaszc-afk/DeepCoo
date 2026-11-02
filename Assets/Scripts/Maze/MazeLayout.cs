@@ -5,7 +5,8 @@ using UnityEngine;
 // Cell (col, row) covers x in [col, col+1) * CellSize and z in (-(row+1), -row] * CellSize.
 public static class MazeLayout
 {
-    // '#' = wall, '.' = floor. Row 0 is the north edge (top of the floor plan).
+    // '#' = wall, '.' = floor, 'S' = safe floor the monster never enters (the start room).
+    // Row 0 is the north edge (top of the floor plan).
     public static readonly string[] Rows =
     {
         "#####################",
@@ -28,9 +29,9 @@ public static class MazeLayout
         "#...#...#.#.....#...#",
         "#.###.#.#.###.#.#.#.#",
         "#...#.........#.....#",
-        "##.##################",
-        "#...#################",
-        "#...#################",
+        "##S##################",
+        "#SSS#################",
+        "#SSS#################",
         "#####################",
     };
 
@@ -40,7 +41,10 @@ public static class MazeLayout
     public static int Height => Rows.Length;
 
     public static bool IsFloor(Vector2Int cell) =>
-        cell.y >= 0 && cell.y < Height && cell.x >= 0 && cell.x < Width && Rows[cell.y][cell.x] == '.';
+        cell.y >= 0 && cell.y < Height && cell.x >= 0 && cell.x < Width && Rows[cell.y][cell.x] != '#';
+
+    public static bool IsSafe(Vector2Int cell) =>
+        IsFloor(cell) && Rows[cell.y][cell.x] == 'S';
 
     public static Vector3 CellCenter(Vector2Int cell) =>
         new Vector3((cell.x + 0.5f) * CellSize, 0f, -(cell.y + 0.5f) * CellSize);
@@ -53,7 +57,7 @@ public static class MazeLayout
         var cells = new List<Vector2Int>();
         for (int r = 0; r < Height; r++)
             for (int c = 0; c < Width; c++)
-                if (Rows[r][c] == '.')
+                if (Rows[r][c] != '#')
                     cells.Add(new Vector2Int(c, r));
         return cells;
     }
@@ -61,8 +65,8 @@ public static class MazeLayout
     static readonly Vector2Int[] Steps = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
     // Shortest path between two floor cells (breadth-first), start and goal included.
-    // Returns null when there is no path.
-    public static List<Vector2Int> FindPath(Vector2Int start, Vector2Int goal)
+    // Returns null when there is no path. With avoidSafe, safe cells are never stepped on.
+    public static List<Vector2Int> FindPath(Vector2Int start, Vector2Int goal, bool avoidSafe = false)
     {
         if (!IsFloor(start) || !IsFloor(goal))
             return null;
@@ -77,7 +81,7 @@ public static class MazeLayout
             foreach (var step in Steps)
             {
                 var next = cell + step;
-                if (IsFloor(next) && !cameFrom.ContainsKey(next))
+                if (IsFloor(next) && !(avoidSafe && IsSafe(next)) && !cameFrom.ContainsKey(next))
                 {
                     cameFrom[next] = cell;
                     queue.Enqueue(next);

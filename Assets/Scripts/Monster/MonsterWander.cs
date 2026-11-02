@@ -4,8 +4,10 @@ using UnityEngine;
 // Moves the monster around the maze. While wandering it picks a random floor cell, follows
 // the corridor path to it, pauses, then picks another. When MonsterSenses calls Pursue() it
 // runs after the last known player position, re-planning the path as that position updates,
-// and gives up after losing track for a while. Investigate() sends it to stand in front of a
-// spot and stare at it for a few seconds (crouched, see MonsterGait), then it wanders off.
+// and gives up after losing track for a while. It never steps into safe cells (the start
+// room), so a player who gets back there is out of reach. Investigate() sends it to stand in
+// front of a spot and stare at it for a few seconds (crouched, see MonsterGait), then it
+// wanders off.
 public class MonsterWander : MonoBehaviour
 {
     public float walkSpeed = 1.1f;     // m/s, slow and deliberate
@@ -47,6 +49,8 @@ public class MonsterWander : MonoBehaviour
     // Called every frame the monster hears or sees the player.
     public void Pursue(Vector3 worldPosition)
     {
+        if (MazeLayout.IsSafe(MazeLayout.WorldToCell(worldPosition)))
+            return;   // it can't go in there, so it doesn't try
         investigating = false;
         IsInspecting = false;
         chaseTarget = worldPosition;
@@ -71,7 +75,7 @@ public class MonsterWander : MonoBehaviour
         inspectStand = standPoint;
         inspectLook = lookPoint;
         inspectTimer = inspectSeconds;
-        path = MazeLayout.FindPath(MazeLayout.WorldToCell(transform.position), MazeLayout.WorldToCell(standPoint));
+        path = MazeLayout.FindPath(MazeLayout.WorldToCell(transform.position), MazeLayout.WorldToCell(standPoint), avoidSafe: true);
         pathIndex = 1;
     }
 
@@ -141,7 +145,7 @@ public class MonsterWander : MonoBehaviour
         if (repathTimer <= 0f)
         {
             repathTimer = repathInterval;
-            path = MazeLayout.FindPath(MazeLayout.WorldToCell(transform.position), MazeLayout.WorldToCell(chaseTarget));
+            path = MazeLayout.FindPath(MazeLayout.WorldToCell(transform.position), MazeLayout.WorldToCell(chaseTarget), avoidSafe: true);
             pathIndex = 1;
         }
 
@@ -190,7 +194,7 @@ public class MonsterWander : MonoBehaviour
             var goal = floorCells[Random.Range(0, floorCells.Count)];
             if (Mathf.Abs(goal.x - here.x) + Mathf.Abs(goal.y - here.y) < minTargetDistance)
                 continue;
-            var found = MazeLayout.FindPath(here, goal);
+            var found = MazeLayout.FindPath(here, goal, avoidSafe: true);
             if (found != null)
             {
                 path = found;

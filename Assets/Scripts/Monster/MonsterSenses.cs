@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 // Either one makes the monster chase, as do loud one-off noises (NoiseEvents) within their
 // range. A player hiding in a locker, wardrobe or bin can't be seen, heard or caught; if the
 // monster was after them, it comes to the hiding spot, crouches to peer in, then leaves.
+// The start room is safe in the same way.
 // Getting caught restarts the level from scratch, which is the game's one-life rule.
 public class MonsterSenses : MonoBehaviour
 {
@@ -68,6 +69,9 @@ public class MonsterSenses : MonoBehaviour
             }
             return;
         }
+
+        if (MazeLayout.IsSafe(MazeLayout.WorldToCell(player.transform.position)))
+            return;   // the start room is safe: no chasing or catching in there
 
         var toPlayer = player.transform.position - transform.position;
         toPlayer.y = 0f;
