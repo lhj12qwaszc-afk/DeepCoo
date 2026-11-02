@@ -36,11 +36,11 @@ public static class MazeBuilder
 
     static readonly Marker[] Markers =
     {
-        new Marker { Name = "PlayerStart",    Col = 1.5f,  Row = 13.5f, Color = Color.white,                  Shape = PrimitiveType.Capsule },
+        new Marker { Name = "PlayerStart",    Col = 1.5f,  Row = 19.5f, Color = Color.white,                  Shape = PrimitiveType.Capsule },
         new Marker { Name = "Key_A",          Col = 1.5f,  Row = 1.5f,  Color = new Color(1f, 0.85f, 0.2f),   Shape = PrimitiveType.Cube },
-        new Marker { Name = "Clue_A",         Col = 7.5f,  Row = 7.5f,  Color = new Color(0.3f, 0.6f, 1f),    Shape = PrimitiveType.Cylinder },
-        new Marker { Name = "MonsterSpawn",   Col = 13.5f, Row = 11.5f, Color = new Color(0.6f, 0.1f, 0.15f), Shape = PrimitiveType.Capsule },
-        new Marker { Name = "ExitDoor",       Col = 13.5f, Row = 1.5f,  Color = new Color(0.2f, 0.9f, 0.4f),  Shape = PrimitiveType.Cube },
+        new Marker { Name = "Clue_A",         Col = 11.5f, Row = 11.5f, Color = new Color(0.3f, 0.6f, 1f),    Shape = PrimitiveType.Cylinder },
+        new Marker { Name = "MonsterSpawn",   Col = 19.5f, Row = 17.5f, Color = new Color(0.6f, 0.1f, 0.15f), Shape = PrimitiveType.Capsule },
+        new Marker { Name = "ExitDoor",       Col = 19.5f, Row = 1.5f,  Color = new Color(0.2f, 0.9f, 0.4f),  Shape = PrimitiveType.Cube },
     };
 
     // Placeholder boxes for furniture whose models aren't made yet: real-world size, standing
@@ -61,9 +61,9 @@ public static class MazeBuilder
     static readonly PropSpec[] PropSpecs =
     {
         // hiding spots are half the wall height (2.25 m), keeping their proportions
-        new PropSpec { Name = "Locker",        Count = 3, Size = new Vector3(0.6f, 2.25f, 0.6f),   Color = HideColor },
-        new PropSpec { Name = "Wardrobe",      Count = 2, Size = new Vector3(1.35f, 2.25f, 0.68f), Color = HideColor },
-        new PropSpec { Name = "TrashBin",      Count = 2, Size = new Vector3(1.88f, 2.25f, 1.5f),  Color = HideColor },
+        new PropSpec { Name = "Locker",        Count = 5, Size = new Vector3(0.6f, 2.25f, 0.6f),   Color = HideColor },
+        new PropSpec { Name = "Wardrobe",      Count = 3, Size = new Vector3(1.35f, 2.25f, 0.68f), Color = HideColor },
+        new PropSpec { Name = "TrashBin",      Count = 3, Size = new Vector3(1.88f, 2.25f, 1.5f),  Color = HideColor },
         new PropSpec { Name = "FilingCabinet", Count = 2, Size = new Vector3(0.5f, 1.35f, 0.65f),  Color = ClueColor },
         new PropSpec { Name = "CorkBoard",     Count = 1, Size = new Vector3(1.2f, 0.9f, 0.05f),   Elevation = 1.1f, Color = ClueColor },
         new PropSpec { Name = "PipeGauge",     Count = 2, Size = new Vector3(1.0f, 0.5f, 0.3f),    Elevation = 0.9f, Color = PuzzleColor },

@@ -6,7 +6,7 @@ using UnityEngine;
 public class BatterySpawner : MonoBehaviour
 {
     public GameObject batteryModel;
-    public int count = 5;
+    public int count = 7;
     public int minDistanceFromPlayer = 3;   // in cells
 
     void Start()
