@@ -36,7 +36,7 @@ public static class MazeBuilder
 
     static readonly Marker[] Markers =
     {
-        new Marker { Name = "PlayerStart",    Col = 1.5f,  Row = 19.5f, Color = Color.white,                  Shape = PrimitiveType.Capsule },
+        new Marker { Name = "PlayerStart",    Col = 2.5f,  Row = 22.5f, Color = Color.white,                  Shape = PrimitiveType.Capsule },
         new Marker { Name = "Key_A",          Col = 1.5f,  Row = 1.5f,  Color = new Color(1f, 0.85f, 0.2f),   Shape = PrimitiveType.Cube },
         new Marker { Name = "Clue_A",         Col = 11.5f, Row = 11.5f, Color = new Color(0.3f, 0.6f, 1f),    Shape = PrimitiveType.Cylinder },
         new Marker { Name = "MonsterSpawn",   Col = 19.5f, Row = 17.5f, Color = new Color(0.6f, 0.1f, 0.15f), Shape = PrimitiveType.Capsule },
@@ -80,6 +80,14 @@ public static class MazeBuilder
         var reserved = new System.Collections.Generic.HashSet<Vector2Int>();
         foreach (var m in Markers)
             reserved.Add(new Vector2Int(Mathf.FloorToInt(m.Col), Mathf.FloorToInt(m.Row)));
+        // keep the start room and its doorway empty
+        var startCell = new Vector2Int(Mathf.FloorToInt(Markers[0].Col), Mathf.FloorToInt(Markers[0].Row));
+        foreach (var cell in MazeLayout.FloorCells())
+        {
+            var path = MazeLayout.FindPath(startCell, cell);
+            if (path != null && path.Count <= 3)
+                reserved.Add(cell);
+        }
 
         // every (floor cell, wall side) pair, in a fixed shuffled order
         var spots = new System.Collections.Generic.List<(Vector2Int cell, Vector2Int side)>();
@@ -198,6 +206,8 @@ public static class MazeBuilder
         {
             if (m.Name == "MonsterSpawn" && PlaceMonster(new Vector3(m.Col * CellSize, 0f, -m.Row * CellSize)))
                 continue;
+            if (m.Name == "PlayerStart")
+                continue;   // the player stands there; a marker would just get in the way
             var go = GameObject.CreatePrimitive(m.Shape);
             go.name = m.Name;
             go.transform.SetParent(markers.transform);
@@ -257,7 +267,7 @@ public static class MazeBuilder
     {
         var player = new GameObject("Player");
         player.transform.position = new Vector3(spawn.Col * CellSize, 0f, -spawn.Row * CellSize);
-        player.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+        player.transform.rotation = Quaternion.identity;   // facing north, out of the start room
         var controller = player.AddComponent<CharacterController>();
         controller.radius = 0.35f;
         controller.stepOffset = 0.3f;
