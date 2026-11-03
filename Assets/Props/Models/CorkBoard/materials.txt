@@ -1,0 +1,2 @@
+material_0.004|CorkBoard_0_base.png|CorkBoard_0_normal.png|1,1,1
+material_0.010|CorkBoard_1_base.png|CorkBoard_1_normal.png|1,1,1

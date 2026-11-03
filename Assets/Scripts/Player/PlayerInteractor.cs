@@ -130,16 +130,16 @@ public class PlayerInteractor : MonoBehaviour
         GUI.color = new Color(0.01f, 0.01f, 0.01f, 0.97f);
         if (kind == HidingSpot.Kind.TrashBin)
         {
-            float gapTop = H * 0.42f, gapBottom = H * 0.5f;
+            float gapTop = H * 0.36f, gapBottom = H * 0.5f;
             GUI.DrawTexture(new Rect(0f, 0f, W, gapTop), Texture2D.whiteTexture);
             GUI.DrawTexture(new Rect(0f, gapBottom, W, H - gapBottom), Texture2D.whiteTexture);
         }
         else
         {
-            int slats = kind == HidingSpot.Kind.Locker ? 6 : 9;
-            float top = H * (kind == HidingSpot.Kind.Locker ? 0.3f : 0.18f);
-            float bottom = H * (kind == HidingSpot.Kind.Locker ? 0.62f : 0.82f);
-            float left = W * (kind == HidingSpot.Kind.Locker ? 0.3f : 0.15f);
+            int slats = kind == HidingSpot.Kind.Locker ? 7 : 9;
+            float top = H * (kind == HidingSpot.Kind.Locker ? 0.12f : 0.12f);
+            float bottom = H * (kind == HidingSpot.Kind.Locker ? 0.66f : 0.68f);
+            float left = W * (kind == HidingSpot.Kind.Locker ? 0.14f : 0.08f);
             float right = W - left;
             float pitch = (bottom - top) / slats;
             float gap = pitch * 0.45f;

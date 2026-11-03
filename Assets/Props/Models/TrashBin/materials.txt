@@ -1,0 +1,1 @@
+material_0.008|TrashBin_0_base.png|TrashBin_0_normal.png|1,1,1

@@ -1,0 +1,1 @@
+material_0|Radio_0_base.png|Radio_0_normal.png|1,1,1

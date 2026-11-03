@@ -1,0 +1,5 @@
+material_0.003|FilingCabinet_0_base.png|FilingCabinet_0_normal.png|1,1,1
+FilingCabinet_-x_board|FilingCabinet_1_base.png||1,1,1
+FilingCabinet_+x_board|FilingCabinet_2_base.png||1,1,1
+FilingCabinet_+y_board|FilingCabinet_3_base.png||1,1,1
+FilingCabinet_+z_board|FilingCabinet_4_base.png||1,1,1

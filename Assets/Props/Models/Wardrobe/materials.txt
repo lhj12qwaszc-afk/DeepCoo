@@ -1,0 +1,5 @@
+material_0.001|Wardrobe_0_base.png|Wardrobe_0_normal.png|1,1,1
+Wardrobe_TopWood|Wardrobe_1_base.png||1,1,1
+Wardrobe_-x_board|Wardrobe_2_base.png||1,1,1
+Wardrobe_+x_board|Wardrobe_3_base.png||1,1,1
+Wardrobe_+y_board|Wardrobe_4_base.png||1,1,1

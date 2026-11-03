@@ -50,8 +50,9 @@ public static class MazeBuilder
         public string Name;
         public int Count;
         public Vector3 Size;      // width, height, depth (depth runs away from the wall)
-        public float Elevation;   // bottom edge above the floor (wall-mounted items)
+        public float Elevation;   // bottom edge above the floor (wall-mounted and hanging items)
         public Color Color;
+        public bool Hanging;      // hangs from the ceiling on a chain
     }
 
     static readonly Color HideColor = new Color(0.25f, 0.45f, 0.85f);   // hiding spots
@@ -67,7 +68,7 @@ public static class MazeBuilder
         new PropSpec { Name = "FilingCabinet", Count = 2, Size = new Vector3(0.5f, 1.35f, 0.65f),  Color = ClueColor },
         new PropSpec { Name = "CorkBoard",     Count = 1, Size = new Vector3(1.2f, 0.9f, 0.05f),   Elevation = 1.1f, Color = ClueColor },
         new PropSpec { Name = "PipeGauge",     Count = 2, Size = new Vector3(1.0f, 0.5f, 0.3f),    Elevation = 0.9f, Color = PuzzleColor },
-        new PropSpec { Name = "Birdcage",      Count = 2, Size = new Vector3(0.5f, 0.7f, 0.5f),    Color = PuzzleColor },
+        new PropSpec { Name = "Birdcage",      Count = 2, Size = new Vector3(0.5f, 0.7f, 0.5f),    Elevation = 1.3f, Color = PuzzleColor, Hanging = true },
         new PropSpec { Name = "Radio",         Count = 1, Size = new Vector3(0.35f, 0.22f, 0.12f), Color = PuzzleColor },
     };
 
@@ -130,9 +131,84 @@ public static class MazeBuilder
                 box.GetComponent<Renderer>().sharedMaterial = mat;
                 if (System.Enum.TryParse<HidingSpot.Kind>(spec.Name, out var kind))
                     box.AddComponent<HidingSpot>().kind = kind;
+                PlaceModel(box, spec, outward);
             }
         }
     }
+
+    // Swaps a placeholder box's look for the real model when there is one. The box stays as the
+    // collider and hiding spot; the model is scaled so its longest side matches the box's, stood
+    // on the box's bottom edge and pushed back against the wall.
+    static void PlaceModel(GameObject box, PropSpec spec, Vector3 outward)
+    {
+        var asset = PropModels.Load(spec.Name);
+        if (asset == null)
+            return;
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+        model.name = "Model";
+        // The import's own rotation stands the model up with its front along +Z; then turn that to
+        // face the corridor.
+        model.transform.SetPositionAndRotation(Vector3.zero,
+            Quaternion.LookRotation(-outward, Vector3.up) * asset.transform.localRotation);
+        var size = Bounds(model).size;
+        float scale = Mathf.Max(spec.Size.x, spec.Size.y, spec.Size.z) / Mathf.Max(size.x, size.y, size.z);
+        model.transform.localScale = Vector3.one * scale;
+
+        var bounds = Bounds(model);
+        var wall = box.transform.position + outward * (spec.Size.z / 2f);
+        var shift = box.transform.position - bounds.center;
+        shift -= outward * Vector3.Dot(shift, outward);                                    // centred along the wall
+        shift += outward * (Vector3.Dot(wall - bounds.center, outward) - Vector3.Dot(bounds.extents, Abs(outward)));
+        shift.y = spec.Elevation - bounds.min.y;                                           // standing on its bottom edge
+        model.transform.position += shift;
+
+        // parented to the box but keeping its own world size
+        model.transform.SetParent(box.transform, true);
+        box.GetComponent<Renderer>().enabled = false;
+        foreach (var c in model.GetComponentsInChildren<Collider>())
+            Object.DestroyImmediate(c);
+
+        if (spec.Hanging)
+            HangFromCeiling(box, Bounds(model));
+        if (spec.Name == "PipeGauge")
+            box.AddComponent<PipeGaugeNeedle>();
+    }
+
+    // A chain of links from the top of a hanging prop up to the ceiling.
+    static void HangFromCeiling(GameObject box, Bounds bounds)
+    {
+        const float link = 0.07f;
+        var mat = CreateMaterial("Prop_Chain", new Color(0.22f, 0.13f, 0.08f));
+        mat.SetFloat("_Metallic", 0.6f);
+        mat.SetFloat("_Smoothness", 0.3f);
+        var chain = new GameObject("Chain").transform;
+        chain.SetParent(box.transform, true);
+        var top = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+        int count = Mathf.CeilToInt((WallHeight - top.y) / link);
+        for (int i = 0; i < count; i++)
+        {
+            var piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            piece.name = "Link";
+            Object.DestroyImmediate(piece.GetComponent<Collider>());
+            piece.transform.SetParent(chain, true);
+            piece.transform.position = top + Vector3.up * (link * (i + 0.5f));
+            // alternate links turn 90 degrees, like a real chain
+            piece.transform.rotation = Quaternion.Euler(0f, i % 2 == 0 ? 0f : 90f, 0f);
+            piece.transform.localScale = new Vector3(0.035f, link * 1.1f, 0.012f);
+            piece.GetComponent<Renderer>().sharedMaterial = mat;
+        }
+    }
+
+    static Bounds Bounds(GameObject go)
+    {
+        var renderers = go.GetComponentsInChildren<Renderer>();
+        var b = renderers[0].bounds;
+        foreach (var r in renderers)
+            b.Encapsulate(r.bounds);
+        return b;
+    }
+
+    static Vector3 Abs(Vector3 v) => new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));
 
     [MenuItem("DeepCoo/Build Maze Scene")]
     public static void Build()
@@ -167,14 +243,15 @@ public static class MazeBuilder
         floor.GetComponent<Renderer>().sharedMaterial = floorMat;
         GameObjectUtility.SetStaticEditorFlags(floor, StaticEditorFlags.BatchingStatic | StaticEditorFlags.ContributeGI);
 
-        // Ceiling starts disabled so the maze is visible from the Scene view; enable it for play.
+        // The ceiling is on in the game (hanging props hang from it) but hidden in the Scene view
+        // so the maze can still be seen from above.
         var ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
         ceiling.name = "Ceiling";
         ceiling.transform.SetParent(root.transform);
         ceiling.transform.localPosition = new Vector3(width / 2f, WallHeight + 0.05f, -depth / 2f);
         ceiling.transform.localScale = new Vector3(width, 0.1f, depth);
         ceiling.GetComponent<Renderer>().sharedMaterial = ceilingMat;
-        ceiling.SetActive(false);
+        SceneVisibilityManager.instance.Hide(ceiling, true);
 
         // Merge horizontal runs of wall cells into one block each to keep the object count low.
         var walls = new GameObject("Walls");

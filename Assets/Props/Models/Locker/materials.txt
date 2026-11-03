@@ -1,0 +1,1 @@
+material_0.002|Locker_0_base.png|Locker_0_normal.png|1,1,1

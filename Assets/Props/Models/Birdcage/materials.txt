@@ -1,0 +1,2 @@
+material_0.005|Birdcage_0_base.png|Birdcage_0_normal.png|1,1,1
+BirdCage_bars|||0.160,0.090,0.050
