@@ -36,3 +36,7 @@ crashlytics-build.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude test screenshots (an empty scratch folder)
+/[Aa]ssets/Temp/
+/[Aa]ssets/Temp.meta
