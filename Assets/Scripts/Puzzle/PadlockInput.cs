@@ -134,7 +134,7 @@ public class PadlockInput : Interactable
 
     static void Label(Rect rect, string text, int fontSize)
     {
-        var style = new GUIStyle(GUI.skin.label) { fontSize = fontSize, alignment = TextAnchor.MiddleCenter };
+        var style = new GUIStyle(GUI.skin.label) { font = GameFont.Regular, fontSize = fontSize, alignment = TextAnchor.MiddleCenter };
         GUI.Label(rect, text, style);
     }
 }

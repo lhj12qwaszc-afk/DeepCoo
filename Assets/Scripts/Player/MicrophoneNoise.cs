@@ -82,7 +82,7 @@ public class MicrophoneNoise : MonoBehaviour
             return;
         const float x = 110f, w = 60f, h = 10f;
         float top = Screen.height - 20f - 14f;
-        var style = new GUIStyle(GUI.skin.label) { fontSize = 13 };
+        var style = new GUIStyle(GUI.skin.label) { font = GameFont.Regular, fontSize = 13 };
         if (!HasMicrophone && testLevel < 0f)
         {
             GUI.color = new Color(1f, 1f, 1f, 0.5f);

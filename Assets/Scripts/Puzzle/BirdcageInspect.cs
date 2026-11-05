@@ -188,7 +188,7 @@ public class BirdcageInspect : Interactable
     {
         if (!open)
             return;
-        var style = new GUIStyle(GUI.skin.label) { fontSize = 18, alignment = TextAnchor.MiddleCenter };
+        var style = new GUIStyle(GUI.skin.label) { font = GameFont.Regular, fontSize = 18, alignment = TextAnchor.MiddleCenter };
         var rect = new Rect(0f, Screen.height - 40f, Screen.width, 30f);
         GUI.color = new Color(0f, 0f, 0f, 0.7f);
         GUI.Label(new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height), "[E] 닫기", style);

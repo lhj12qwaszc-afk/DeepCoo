@@ -7,7 +7,9 @@ using UnityEngine.InputSystem;
 // While hidden the same key gets you out. Other usable things (Interactable: puzzle clues, the
 // padlock) just take a tap. Notes they show hold the view still and stay on screen until E is
 // pressed again; a stack of notes is read one sheet at a time, A/D or the arrow keys turning
-// the pages. Draws the prompt, the hold ring, notes, and the view through the slats.
+// the pages. The paper is the scene's "NoteView" canvas (Paper with Title, Body, Footer,
+// LeftArrow, RightArrow, PageHint), laid out by hand in the Scene view; it's hidden until a
+// note is read. Draws the prompt, the hold ring, and the view through the slats.
 [RequireComponent(typeof(FirstPersonController))]
 public class PlayerInteractor : MonoBehaviour
 {
@@ -15,13 +17,10 @@ public class PlayerInteractor : MonoBehaviour
     public float quietHoldSeconds = 1.6f;
     public float tapSeconds = 0.25f;   // releasing before this counts as a tap
 
-    [Header("Note paper (pixels)")]
-    public float noteWidth = 520f;
-    public float noteHeight = 300f;
-    public int noteTitleSize = 22;
-    public int noteTextSize = 22;
-
     FirstPersonController fps;
+    GameObject noteView;
+    TMPro.TMP_Text noteTitle, noteBody, noteFooter;
+    GameObject leftArrow, rightArrow, pageHint;
     HidingSpot target;     // what we're looking at, or the spot we're inside
     HidingSpot hiddenIn;
     Interactable usable;   // a non-hiding thing we're looking at
@@ -40,7 +39,43 @@ public class PlayerInteractor : MonoBehaviour
     public HidingSpot HiddenIn => hiddenIn;
     public static bool ReadingNote { get; private set; }
 
-    void Awake() => fps = GetComponent<FirstPersonController>();
+    void Awake()
+    {
+        fps = GetComponent<FirstPersonController>();
+        noteView = GameObject.Find("NoteView");
+        if (noteView == null)
+        {
+            Debug.LogWarning("[PlayerInteractor] No NoteView in the scene; notes can't be shown.");
+            return;
+        }
+        var paper = noteView.transform.Find("Paper");
+        noteTitle = paper.Find("Title").GetComponent<TMPro.TMP_Text>();
+        noteBody = paper.Find("Body").GetComponent<TMPro.TMP_Text>();
+        noteFooter = paper.Find("Footer").GetComponent<TMPro.TMP_Text>();
+        leftArrow = paper.Find("LeftArrow").gameObject;
+        rightArrow = paper.Find("RightArrow").gameObject;
+        pageHint = paper.Find("PageHint").gameObject;
+        noteView.SetActive(false);
+    }
+
+    // Keeps the paper in step with the sheet being read.
+    void LateUpdate()
+    {
+        if (noteView == null)
+            return;
+        bool show = notes != null;
+        if (noteView.activeSelf != show)
+            noteView.SetActive(show);
+        if (!show)
+            return;
+        bool many = notes.Length > 1;
+        noteTitle.text = notes[page].title;
+        noteBody.text = notes[page].text;
+        noteFooter.text = many ? $"{page + 1} / {notes.Length}        [E] 닫기" : "[E] 닫기";
+        leftArrow.SetActive(many && page > 0);
+        rightArrow.SetActive(many && page < notes.Length - 1);
+        pageHint.SetActive(many);
+    }
 
     public void ShowNote(string text) => ShowNotes(new[] { new Note("", text) });
 
@@ -175,10 +210,7 @@ public class PlayerInteractor : MonoBehaviour
         if (PadlockInput.IsOpen || BirdcageInspect.IsOpen)
             return;   // the close-up draws itself
         if (notes != null)
-        {
-            DrawNote(notes[page], page, notes.Length);
-            return;
-        }
+            return;   // the NoteView paper is up
         if (usable != null)
         {
             DrawPrompt($"[E] {usable.Prompt}");
@@ -196,7 +228,7 @@ public class PlayerInteractor : MonoBehaviour
 
     static void DrawPrompt(string text)
     {
-        var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
+        var style = new GUIStyle(GUI.skin.label) { font = GameFont.Regular, fontSize = 20, alignment = TextAnchor.MiddleCenter };
         var rect = new Rect(0f, Screen.height * 0.72f, Screen.width, 30f);
         GUI.color = new Color(0f, 0f, 0f, 0.7f);
         GUI.Label(new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height), text, style);
@@ -204,44 +236,6 @@ public class PlayerInteractor : MonoBehaviour
         GUI.Label(rect, text, style);
     }
 
-    // A sheet of old paper in the middle of the screen; with more than one sheet, an arrow shows
-    // on each side that has another page to turn to.
-    void DrawNote(Note note, int page, int count)
-    {
-        float w = Mathf.Min(noteWidth, Screen.width - 160f), h = Mathf.Min(noteHeight, Screen.height - 100f);   // room for the arrows
-        var r = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f, w, h);
-        GUI.color = new Color(0f, 0f, 0f, 0.5f);
-        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
-        GUI.color = new Color(0.78f, 0.72f, 0.58f, 0.97f);
-        GUI.DrawTexture(r, Texture2D.whiteTexture);
-        GUI.color = Color.white;
-        var ink = new Color(0.18f, 0.12f, 0.08f);
-        if (!string.IsNullOrEmpty(note.title))
-        {
-            var titleStyle = new GUIStyle(GUI.skin.label) { fontSize = noteTitleSize, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = ink } };
-            GUI.Label(new Rect(r.x, r.y + 18f, r.width, 32f), note.title, titleStyle);
-        }
-        var style = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = noteTextSize, alignment = TextAnchor.MiddleCenter, wordWrap = true,
-            normal = { textColor = ink },
-        };
-        GUI.Label(new Rect(r.x + 30f, r.y + 40f, r.width - 60f, r.height - 90f), note.text, style);
-
-        var hint = new GUIStyle(GUI.skin.label) { fontSize = 16, alignment = TextAnchor.MiddleCenter, normal = { textColor = new Color(0.3f, 0.25f, 0.2f) } };
-        string footer = count > 1 ? $"{page + 1} / {count}        [E] 닫기" : "[E] 닫기";
-        GUI.Label(new Rect(r.x, r.yMax - 36f, r.width, 26f), footer, hint);
-        if (count > 1)
-        {
-            var arrow = new GUIStyle(GUI.skin.label) { fontSize = 56, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            if (page > 0)
-                GUI.Label(new Rect(r.x - 60f, r.center.y - 40f, 50f, 80f), "<", arrow);
-            if (page < count - 1)
-                GUI.Label(new Rect(r.xMax + 10f, r.center.y - 40f, 50f, 80f), ">", arrow);
-            var under = new GUIStyle(hint) { normal = { textColor = new Color(0.8f, 0.8f, 0.78f) } };
-            GUI.Label(new Rect(0f, r.yMax + 14f, Screen.width, 26f), "A / D  또는  ← / →  넘기기", under);
-        }
-    }
 
     static void DrawHoldBar(float t)
     {
