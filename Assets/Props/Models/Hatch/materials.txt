@@ -1,0 +1,4 @@
+material_0.020|Hatch_0_base.png|Hatch_0_normal.png|1,1,1
+Hatch_hinge.003|Hatch_1_base.png||1,1,1
+material_0.025|Hatch_2_base.png|Hatch_2_normal.png|1,1,1
+material_0.012|Hatch_3_base.png|Hatch_3_normal.png|1,1,1

@@ -39,6 +39,7 @@ public class FirstPersonController : MonoBehaviour
     public NoiseLevel CurrentNoise { get; private set; }
     public bool IsCrouching { get; private set; }
     public bool IsHidden { get; private set; }
+    [System.NonSerialized] public bool inputLocked;   // a close-up (the padlock) has the keys
 
     CharacterController controller;
     float pitch;
@@ -67,6 +68,12 @@ public class FirstPersonController : MonoBehaviour
             LockCursor(false);
         else if (mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
             LockCursor(true);
+
+        if (inputLocked)
+        {
+            CurrentNoise = NoiseLevel.Silent;
+            return;
+        }
 
         if (IsHidden)
         {

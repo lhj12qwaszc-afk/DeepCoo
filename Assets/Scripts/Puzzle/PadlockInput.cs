@@ -1,0 +1,140 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+
+// The combination padlock on the exit hatch. E opens a close-up with four dials:
+// A/D (or arrows) pick a dial, W/S turn it, number keys type straight in, Enter tries the code,
+// Esc or Backspace steps back. The right code opens the hatch and ends the game; a wrong one
+// rattles the lock loudly enough for the monster to hear.
+public class PadlockInput : Interactable
+{
+    public PuzzleManager puzzle;
+    public float rattleNoiseRange = 18f;
+
+    readonly int[] dials = new int[4];
+    int selected;
+    bool open;
+    bool escaped;
+    float wrongUntil;
+    FirstPersonController fps;
+
+    // the number row runs 1..9, 0 in the Key enum
+    static readonly Key[] DigitKeys = { Key.Digit0, Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4,
+                                        Key.Digit5, Key.Digit6, Key.Digit7, Key.Digit8, Key.Digit9 };
+
+    public static bool IsOpen { get; private set; }
+
+    public override string Prompt => "자물쇠 번호 맞추기";
+    public override bool CanUse => !escaped;
+
+    public override void Use(PlayerInteractor player)
+    {
+        fps = player.GetComponent<FirstPersonController>();
+        SetOpen(true);
+    }
+
+    void SetOpen(bool value)
+    {
+        open = value;
+        IsOpen = value || escaped;
+        if (fps != null)
+            fps.inputLocked = value || escaped;
+    }
+
+    void OnDestroy() => IsOpen = false;
+
+    void Update()
+    {
+        var k = Keyboard.current;
+        if (k == null)
+            return;
+        if (escaped)
+        {
+            if (k.rKey.wasPressedThisFrame)
+            {
+                Time.timeScale = 1f;
+                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            }
+            return;
+        }
+        if (!open)
+            return;
+
+        if (k.escapeKey.wasPressedThisFrame || k.backspaceKey.wasPressedThisFrame)
+        {
+            SetOpen(false);
+            return;
+        }
+        if (k.aKey.wasPressedThisFrame || k.leftArrowKey.wasPressedThisFrame) selected = (selected + 3) % 4;
+        if (k.dKey.wasPressedThisFrame || k.rightArrowKey.wasPressedThisFrame) selected = (selected + 1) % 4;
+        if (k.wKey.wasPressedThisFrame || k.upArrowKey.wasPressedThisFrame) dials[selected] = (dials[selected] + 1) % 10;
+        if (k.sKey.wasPressedThisFrame || k.downArrowKey.wasPressedThisFrame) dials[selected] = (dials[selected] + 9) % 10;
+        for (int d = 0; d < 10; d++)
+        {
+            if (k[DigitKeys[d]].wasPressedThisFrame || k[Key.Numpad0 + d].wasPressedThisFrame)
+            {
+                dials[selected] = d;
+                selected = Mathf.Min(selected + 1, 3);
+            }
+        }
+        if (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame)
+            TryCode();
+    }
+
+    void TryCode()
+    {
+        if (puzzle != null && string.Concat(dials) == puzzle.CodeText)
+        {
+            escaped = true;
+            SetOpen(false);
+            Time.timeScale = 0f;   // the monster stops too
+            return;
+        }
+        wrongUntil = Time.time + 2f;
+        NoiseEvents.Emit(transform.position, rattleNoiseRange);
+    }
+
+    void OnGUI()
+    {
+        if (escaped)
+        {
+            Shade(0.85f);
+            Label(new Rect(0f, Screen.height * 0.38f, Screen.width, 60f), "자물쇠가 풀렸다.  해치를 열고 빠져나왔다.", 34);
+            Label(new Rect(0f, Screen.height * 0.38f + 70f, Screen.width, 30f), "[R] 처음부터 다시", 20);
+            return;
+        }
+        if (!open)
+            return;
+
+        Shade(0.6f);
+        const float size = 90f, gap = 20f;
+        float total = 4 * size + 3 * gap;
+        float x0 = (Screen.width - total) / 2f, y = Screen.height * 0.4f;
+        Label(new Rect(0f, y - 70f, Screen.width, 40f), "자물쇠 번호", 28);
+        for (int i = 0; i < 4; i++)
+        {
+            var r = new Rect(x0 + i * (size + gap), y, size, size);
+            GUI.color = i == selected ? new Color(0.85f, 0.6f, 0.25f, 0.95f) : new Color(0.25f, 0.22f, 0.2f, 0.95f);
+            GUI.DrawTexture(r, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            Label(r, dials[i].ToString(), 54);
+        }
+        Label(new Rect(0f, y + size + 16f, Screen.width, 26f), "A/D 자리 고르기    W/S 또는 숫자키로 돌리기", 18);
+        Label(new Rect(0f, y + size + 42f, Screen.width, 26f), "Enter 열기    Esc 그만두기", 18);
+        if (Time.time < wrongUntil)
+            Label(new Rect(0f, y + size + 80f, Screen.width, 34f), "철컥!  열리지 않는다…", 26);
+    }
+
+    static void Shade(float alpha)
+    {
+        GUI.color = new Color(0f, 0f, 0f, alpha);
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = Color.white;
+    }
+
+    static void Label(Rect rect, string text, int fontSize)
+    {
+        var style = new GUIStyle(GUI.skin.label) { fontSize = fontSize, alignment = TextAnchor.MiddleCenter };
+        GUI.Label(rect, text, style);
+    }
+}

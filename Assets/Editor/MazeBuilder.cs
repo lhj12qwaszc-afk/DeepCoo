@@ -283,6 +283,8 @@ public static class MazeBuilder
         {
             if (m.Name == "MonsterSpawn" && PlaceMonster(new Vector3(m.Col * CellSize, 0f, -m.Row * CellSize)))
                 continue;
+            if (m.Name == "ExitDoor" && PlaceExitHatch(markers.transform, new Vector3(m.Col * CellSize, 0f, -m.Row * CellSize)))
+                continue;
             if (m.Name == "PlayerStart")
                 continue;   // the player stands there; a marker would just get in the way
             var go = GameObject.CreatePrimitive(m.Shape);
@@ -339,6 +341,33 @@ public static class MazeBuilder
         monster.AddComponent<TentacleWiggle>();
         return true;
     }
+
+    // The way out: a floor hatch with the padlock on its hasp, lying front face up with its hinges
+    // toward the north wall. Size and place were set by hand in the editor (about 2 m square, in
+    // the north-east corner of the exit cell). Returns false when the model hasn't been imported.
+    static bool PlaceExitHatch(Transform parent, Vector3 position)
+    {
+        var asset = PropModels.Load("Hatch");
+        if (asset == null)
+            return false;
+        var root = new GameObject("ExitDoor").transform;
+        root.SetParent(parent);
+        root.position = position + ExitHatchOffset;
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+        model.name = "Model";
+        model.transform.SetParent(root, false);
+        // the import's rotation stands it up with its front along +Z; lay that front face up
+        model.transform.localRotation = Quaternion.LookRotation(Vector3.up, Vector3.forward) * asset.transform.localRotation;
+        model.transform.localPosition = ExitHatchModelPosition;
+        model.transform.localScale = ExitHatchModelScale;
+        foreach (var c in model.GetComponentsInChildren<Collider>())
+            Object.DestroyImmediate(c);
+        return true;
+    }
+
+    static readonly Vector3 ExitHatchOffset = new Vector3(1.069f, 0f, 1.07f);          // from the exit cell's centre
+    static readonly Vector3 ExitHatchModelPosition = new Vector3(-0.07f, 0.1382f, -1.0688f);
+    static readonly Vector3 ExitHatchModelScale = new Vector3(2.1183f, 2.6278f, 2.1183f);
 
     static void CreatePlayer(Marker spawn)
     {

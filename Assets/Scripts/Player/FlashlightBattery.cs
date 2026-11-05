@@ -53,6 +53,8 @@ public class FlashlightBattery : MonoBehaviour
 
     void OnGUI()
     {
+        if (Interactable.CloseUpOpen)
+            return;
         const float x = 20f, y = 20f, w = 70f, h = 18f;
         float top = Screen.height - y - h;
         GUI.color = new Color(1f, 1f, 1f, 0.6f);
