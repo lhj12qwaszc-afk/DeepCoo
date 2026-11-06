@@ -5,9 +5,10 @@ using UnityEngine.SceneManagement;
 // A handheld tracker the player starts with. M raises it into the left hand and lowers it again;
 // it can be used while walking. Its screen is a small radar, turned so "up" is the way the player
 // faces: the maze walls around the player, the player as a green arrow in the middle, and the
-// monster as a red dot when it comes within range. No battery.
-// The device is Resources/Tracker if that model exists (its screen part must be named "Screen"),
-// otherwise a plain stand-in box.
+// monster as a red dot when it comes within range. No battery. One thing in hand at a time: while
+// the tracker is up the flashlight goes down and dark, and comes back as it was afterwards.
+// The device is the model Resources/Tracker/Tracker (its screen part is named "Screen"; the radar
+// is drawn on it), or a plain stand-in box if that's missing.
 public class PositionTracker : MonoBehaviour
 {
     const int Pixels = 128;           // radar resolution
@@ -15,17 +16,15 @@ public class PositionTracker : MonoBehaviour
     const float RefreshRate = 12f;    // radar redraws per second
     const float RaiseSpeed = 4f;      // raise/lower: 1 / seconds
 
-    static readonly Vector3 RaisedPosition = new Vector3(-0.12f, -0.075f, 0.32f);
-    static readonly Vector3 LoweredPosition = new Vector3(-0.13f, -0.42f, 0.24f);
+    static readonly Vector3 RaisedPosition = new Vector3(-0.085f, -0.04f, 0.22f);   // close enough to read
+    static readonly Vector3 LoweredPosition = new Vector3(-0.1f, -0.36f, 0.18f);
     static readonly Quaternion HeldRotation = Quaternion.Euler(22f, -14f, 0f);   // screen tipped toward the eye
 
-    static readonly Color32 Off = new Color32(0, 0, 0, 255);
     static readonly Color32 Floor = new Color32(4, 14, 6, 255);
     static readonly Color32 Wall = new Color32(16, 52, 22, 255);
     static readonly Color32 Edge = new Color32(60, 190, 80, 255);
     static readonly Color32 Player = new Color32(90, 255, 110, 255);
     static readonly Color32 Monster = new Color32(255, 40, 30, 255);
-    static readonly Color32 Ring = new Color32(30, 90, 40, 255);
 
     FirstPersonController fps;
     Transform device;
@@ -33,8 +32,15 @@ public class PositionTracker : MonoBehaviour
     Color32[] pixels;
     bool held;
     float raised;      // 0 lowered (out of sight) .. 1 up in front of the eyes
+
+    // the tracker is (partly) up in front of the eyes; the battery gauge hides then
+    public static bool InView { get; private set; }
     float nextDraw;
     MonsterWander monster;
+    Transform flashlightHand;
+    Vector3 flashlightHome;
+    bool holdingLight;     // the flashlight was put away for the tracker...
+    bool lightWasOn;       // ...and whether it was on then
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Init()
@@ -66,10 +72,13 @@ public class PositionTracker : MonoBehaviour
     {
         Renderer screenRenderer;
         GameObject root;
-        var model = Resources.Load<GameObject>("Tracker");
+        var model = Resources.Load<GameObject>("Tracker/Tracker");
         if (model != null)
         {
-            root = Instantiate(model);
+            // the import faces the model's front along +Z; turn it round to face the eye
+            root = new GameObject();
+            var body = Instantiate(model, root.transform);
+            body.transform.localRotation = Quaternion.Euler(0f, 180f, 0f) * model.transform.localRotation;
             var part = FindDeep(root.transform, "Screen");
             screenRenderer = part != null ? part.GetComponent<Renderer>() : null;
         }
@@ -119,12 +128,14 @@ public class PositionTracker : MonoBehaviour
     {
         var k = Keyboard.current;
         bool busy = fps.inputLocked || Interactable.CloseUpOpen;
-        if (k != null && !busy && k.mKey.wasPressedThisFrame)
+        if (k != null && !busy && PlayerGear.HasTracker && k.mKey.wasPressedThisFrame)
             held = !held;
         bool up = held && !busy;
 
         raised = Mathf.MoveTowards(raised, up ? 1f : 0f, RaiseSpeed * Time.deltaTime);
+        InView = raised > 0f;
         float t = Mathf.SmoothStep(0f, 1f, raised);
+        SwapWithFlashlight(t);
         device.localPosition = Vector3.Lerp(LoweredPosition, RaisedPosition, t);
         device.gameObject.SetActive(raised > 0f);
 
@@ -132,6 +143,38 @@ public class PositionTracker : MonoBehaviour
         {
             nextDraw = Time.time + 1f / RefreshRate;
             Draw();
+        }
+    }
+
+    // the flashlight hand drops out of sight as the tracker comes up, its light off; when the
+    // tracker is put away the flashlight comes back up, on again if it was on
+    void SwapWithFlashlight(float t)
+    {
+        if (flashlightHand == null)
+        {
+            flashlightHand = fps.cameraRoot.Find("FlashlightHand");
+            if (flashlightHand == null)
+                return;
+            flashlightHome = flashlightHand.localPosition;
+        }
+        flashlightHand.localPosition = flashlightHome + Vector3.down * (0.4f * t);
+        var light = fps.flashlight;
+        if (light == null)
+            return;
+        if (raised > 0f)
+        {
+            if (!holdingLight)
+            {
+                holdingLight = true;
+                lightWasOn = light.enabled;
+            }
+            light.enabled = false;
+        }
+        else if (holdingLight)
+        {
+            holdingLight = false;
+            if (!fps.IsHidden)
+                light.enabled = lightWasOn;
         }
     }
 
@@ -153,14 +196,8 @@ public class PositionTracker : MonoBehaviour
         for (int y = 0; y < Pixels; y++)
             for (int x = 0; x < Pixels; x++)
             {
-                float dx = x + 0.5f - half, dy = y + 0.5f - half;
-                float r = Mathf.Sqrt(dx * dx + dy * dy);
                 Color32 c;
-                if (r > half)
-                    c = Off;
-                else if (r > half - 2f)
-                    c = Ring;
-                else if (IsWall(x + 0.5f, y + 0.5f))
+                if (IsWall(x + 0.5f, y + 0.5f))   // the whole square screen, edge to edge
                     c = IsWall(x + 1.5f, y + 0.5f) && IsWall(x - 0.5f, y + 0.5f) && IsWall(x + 0.5f, y + 1.5f) && IsWall(x + 0.5f, y - 0.5f) ? Wall : Edge;
                 else
                     c = Floor;
@@ -175,7 +212,7 @@ public class PositionTracker : MonoBehaviour
             var offset = monster.transform.position - me;
             float mx = Vector3.Dot(offset, right) / metresPerPixel + half;
             float my = Vector3.Dot(offset, forward) / metresPerPixel + half;
-            if (new Vector2(mx - half, my - half).magnitude < half - 4f)
+            if (mx > 3f && mx < Pixels - 3f && my > 3f && my < Pixels - 3f)
                 Dot(mx, my, 3.5f, Monster);
         }
 
@@ -207,6 +244,7 @@ public class PositionTracker : MonoBehaviour
 
     void OnDestroy()
     {
+        InView = false;
         if (screen != null) Destroy(screen);
     }
 }

@@ -70,32 +70,104 @@ public class PuzzleManager : MonoBehaviour
         Source.Gauge => "압력계 바늘이 가리킨다.",
         Source.Radio => "라디오가 들려준다.",
         Source.Birdcage => "새장 속 깃털의 개수다.",
-        _ => "구겨진 쪽지에 적혀 있다.",
+        _ => "어느 서랍 속 구겨진 쪽지에 적혀 있다.",
     };
 
-    // Always the same places (only what the notes say changes): the board has the hints for the
-    // first and second digits, the first filing cabinet the third, the second cabinet the fourth
-    // and the number note.
+    // The drawing used on a picture hint, from Resources/Hints: any picture whose name starts
+    // with Hint_Radio, Hint_Gauge, Hint_Birdcage or Hint_Note (Hint_Radio, Hint_Radio_2, ...);
+    // with several for one source a run picks one at random. Plain textures work too.
+    static Sprite PictureOf(Source source)
+    {
+        string prefix = source switch
+        {
+            Source.Gauge => "Hint_Gauge",
+            Source.Radio => "Hint_Radio",
+            Source.Birdcage => "Hint_Birdcage",
+            _ => "Hint_Note",
+        };
+        var choices = System.Array.FindAll(Resources.LoadAll<Texture2D>("Hints"), t => t.name.StartsWith(prefix));
+        if (choices.Length == 0)
+            return null;
+        var tex = choices[Random.Range(0, choices.Length)];
+        return Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+    }
+
+    // Where the sheets go: see below.
     void PlaceNotes(Dictionary<string, List<Transform>> props)
     {
         var boards = props.GetValueOrDefault("CorkBoard", new List<Transform>());
         var cabinets = props.GetValueOrDefault("FilingCabinet", new List<Transform>());
         cabinets.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
-        var spots = new List<ClueSpot>();
-        if (boards.Count > 0)
-            spots.Add(AddClueSpot(boards[0], "게시판 메모 읽기"));
-        foreach (var t in cabinets)
-            spots.Add(AddClueSpot(t, "서랍 뒤지기"));
-        if (spots.Count == 0)
+        // places: 0 the board, 1.. the filing cabinets (a sheet goes in one of a cabinet's drawers)
+        var places = new List<Transform>();
+        if (boards.Count > 0) places.Add(boards[0]);
+        places.AddRange(cabinets);
+        if (places.Count == 0)
             return;
 
-        // board, board, cabinet 1, cabinet 2; with fewer spots the last one takes the rest
-        int[] spotFor = { 0, 0, 1, 2 };
+        static bool Free(Drawer d) => !d.HasBattery && !d.HasNote;
+        void AtPlace(PlayerInteractor.Note note, int place)
+        {
+            var t = places[Mathf.Clamp(place, 0, places.Count - 1)];
+            var inside = new List<Drawer>(t.GetComponentsInChildren<Drawer>());
+            inside.RemoveAll(d => !Free(d));
+            if (inside.Count > 0)
+            {
+                inside[Random.Range(0, inside.Count)].PutNote(note);
+                return;
+            }
+            var spot = t.GetComponent<ClueSpot>();
+            if (spot == null)
+                spot = AddClueSpot(t, t == (boards.Count > 0 ? boards[0] : null) ? "게시판 메모 읽기" : "서랍 뒤지기");
+            spot.notes.Add(note);
+        }
+
+        // Each hint is written out or drawn (a picture of the source in the digit's box of four),
+        // picked anew each run but always some of each. Written hints go on the board (first and
+        // second digits) and in a drawer of filing cabinet 1 (third) and 2 (fourth); drawn hints
+        // and the number note each lie in some other drawer, picked anew each run among those
+        // without a battery (no free drawer left: they go with the written ones).
+        int[] placeFor = boards.Count > 0 ? new[] { 0, 0, 1, 2 } : new[] { 0, 0, 0, 1 };
+        var drawn = new bool[4];
         for (int i = 0; i < 4; i++)
-            spots[Mathf.Min(spotFor[i], spots.Count - 1)].notes.Add(
-                new PlayerInteractor.Note($"{Ordinals[i]} 힌트", $"{Ordinals[i]} 숫자는 {Where(SourceAt[i])}"));
-        spots[spots.Count - 1].notes.Add(
-            new PlayerInteractor.Note("구겨진 쪽지", $"숫자 하나만 적혀 있다.\n\n{DigitOf(Source.NumberNote)}"));
+            drawn[i] = Random.value < 0.5f;
+        if (System.Array.TrueForAll(drawn, d => d) || System.Array.TrueForAll(drawn, d => !d))
+        {
+            int flip = Random.Range(0, 4);
+            drawn[flip] = !drawn[flip];
+        }
+        var pictures = new PlayerInteractor.Note?[4];
+        for (int i = 0; i < 4; i++)
+        {
+            var picture = drawn[i] ? PictureOf(SourceAt[i]) : null;
+            if (picture != null)
+                pictures[i] = new PlayerInteractor.Note("힌트", picture, i);
+            else
+                AtPlace(new PlayerInteractor.Note($"{Ordinals[i]} 힌트", $"{Ordinals[i]} 숫자는 {Where(SourceAt[i])}"), placeFor[i]);
+        }
+
+        var drawers = new List<Drawer>(FindObjectsByType<Drawer>(FindObjectsSortMode.None));
+        drawers.RemoveAll(d => !Free(d) || cabinets.Exists(c => d.transform.IsChildOf(c)));
+        for (int i = drawers.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (drawers[i], drawers[j]) = (drawers[j], drawers[i]);
+        }
+        void Stash(PlayerInteractor.Note note, int place)
+        {
+            drawers.RemoveAll(d => !Free(d));
+            if (drawers.Count > 0)
+            {
+                drawers[0].PutNote(note);
+                drawers.RemoveAt(0);
+            }
+            else
+                AtPlace(note, place);
+        }
+        Stash(new PlayerInteractor.Note("구겨진 쪽지", $"숫자 하나만 적혀 있다.\n\n{DigitOf(Source.NumberNote)}"), places.Count - 1);
+        for (int i = 0; i < 4; i++)
+            if (pictures[i].HasValue)
+                Stash(pictures[i].Value, placeFor[i]);
     }
 
     void SetUpHatch()

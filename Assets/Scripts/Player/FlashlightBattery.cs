@@ -53,7 +53,7 @@ public class FlashlightBattery : MonoBehaviour
 
     void OnGUI()
     {
-        if (Interactable.CloseUpOpen)
+        if (Interactable.CloseUpOpen || PositionTracker.InView || !PlayerGear.HasFlashlight)   // the tracker covers this corner; no flashlight yet
             return;
         const float x = 20f, y = 20f, w = 70f, h = 18f;
         float top = Screen.height - y - h;

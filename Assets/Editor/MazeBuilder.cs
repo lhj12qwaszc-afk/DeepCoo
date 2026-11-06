@@ -132,19 +132,73 @@ public static class MazeBuilder
                 if (System.Enum.TryParse<HidingSpot.Kind>(spec.Name, out var kind))
                     box.AddComponent<HidingSpot>().kind = kind;
                 PlaceModel(box, spec, outward);
+                if (spec.Name == "FilingCabinet")
+                    MakeDrawersOpen(box.transform);
             }
         }
     }
 
-    // Chests of drawers where spare batteries are found (Drawer, BatterySpawner). Most go in the
-    // north-west of the maze, which has nothing else to find; a few elsewhere. Stand-in boxes
-    // until there's a model. Can be re-run on its own: it replaces the old "Drawers" group.
+    // Filing cabinets whose drawers hide spare batteries, sheets and a scare (Drawer,
+    // BatterySpawner, PuzzleManager). Most go in the north-west of the maze, which has nothing
+    // else to find; a few elsewhere. Can be re-run on its own: it replaces the old "Drawers" group.
     const int DrawerSeed = 11;
     const int DrawersNorthWest = 5;
     const int DrawersElsewhere = 3;
-    const int DrawerSpacing = 3;   // cells between any two drawers
-    static readonly Vector3 DrawerSize = new Vector3(0.7f, 0.8f, 0.5f);   // before DrawerScale
-    const float DrawerScale = 1.5f;   // the whole cabinet, drawer travel included
+    const int DrawerSpacing = 3;   // cells between any two cabinets
+    static readonly PropSpec CabinetSpec = new PropSpec { Name = "FilingCabinet", Size = new Vector3(0.5f, 1.35f, 0.65f), Color = ClueColor };
+
+    // A filing cabinet against the wall at `pos` (its back on the wall, facing away from `outward`),
+    // the model in place and all four drawers working.
+    static GameObject PlaceCabinet(Transform parent, string name, Vector3 pos, Vector3 outward)
+    {
+        var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        box.name = name;
+        box.transform.SetParent(parent);
+        pos.y = CabinetSpec.Size.y / 2f;
+        box.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-outward, Vector3.up));
+        box.transform.localScale = CabinetSpec.Size;
+        box.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Placeholder_" + CabinetSpec.Name, CabinetSpec.Color);
+        PlaceModel(box, CabinetSpec, outward);
+        MakeDrawersOpen(box.transform);
+        return box;
+    }
+
+    // The cabinet model's Drawer_1..4 each get a Drawer and a collider of their own, standing a
+    // little proud of the front so the look ray picks the drawer, not the body; the body gets a
+    // collider to bump into instead of the placeholder box.
+    public static void MakeDrawersOpen(Transform holder)
+    {
+        var model = holder.Find("Model");
+        if (model == null)
+            return;
+        foreach (var c in holder.GetComponents<Collider>())
+            Object.DestroyImmediate(c);
+        foreach (var c in model.GetComponentsInChildren<Collider>(true))
+            Object.DestroyImmediate(c);
+        foreach (var d in model.GetComponentsInChildren<Drawer>(true))
+            Object.DestroyImmediate(d);
+
+        var bodyMesh = model.GetComponent<MeshFilter>();
+        if (bodyMesh != null)
+        {
+            var body = model.gameObject.AddComponent<BoxCollider>();
+            body.center = bodyMesh.sharedMesh.bounds.center;
+            body.size = bodyMesh.sharedMesh.bounds.size;
+        }
+        var outward = holder.forward;   // the way the cabinet faces
+        for (int i = 1; i <= 4; i++)
+        {
+            var drawer = model.Find($"Drawer_{i}");
+            if (drawer == null)
+                continue;
+            var b = drawer.GetComponent<MeshFilter>().sharedMesh.bounds;
+            var proud = drawer.InverseTransformVector(outward * 0.03f);
+            var col = drawer.gameObject.AddComponent<BoxCollider>();
+            col.center = b.center + proud / 2f;
+            col.size = b.size + new Vector3(Mathf.Abs(proud.x), Mathf.Abs(proud.y), Mathf.Abs(proud.z));
+            drawer.gameObject.AddComponent<Drawer>();
+        }
+    }
 
     static bool InNorthWest(Vector3 p) => p.x < 56f && p.z > -38f;
 
@@ -184,8 +238,6 @@ public static class MazeBuilder
 
         var root = new GameObject("Drawers").transform;
         root.SetParent(maze);
-        var bodyMat = CreateMaterial("Placeholder_Drawer", new Color(0.36f, 0.3f, 0.24f));
-        var frontMat = CreateMaterial("Placeholder_DrawerFront", new Color(0.48f, 0.4f, 0.31f));
         var placed = new System.Collections.Generic.List<Vector2Int>();
         int northWest = 0, elsewhere = 0;
         foreach (var (cell, side) in spots)
@@ -203,53 +255,82 @@ public static class MazeBuilder
             if (nw) northWest++; else elsewhere++;
 
             var outward = new Vector3(side.x, 0f, -side.y);
-            var pos = MazeLayout.CellCenter(cell) + outward * (CellSize / 2f - DrawerScale * DrawerSize.z / 2f - 0.02f);
-            var drawer = new GameObject($"Drawer_{placed.Count}");
-            drawer.transform.SetParent(root);
-            drawer.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-outward, Vector3.up));
-            drawer.transform.localScale = Vector3.one * DrawerScale;
-            BuildDrawerStandIn(drawer.transform, bodyMat, frontMat);
-            drawer.AddComponent<Drawer>();
+            var pos = MazeLayout.CellCenter(cell) + outward * (CellSize / 2f - CabinetSpec.Size.z / 2f - 0.02f);
+            PlaceCabinet(root, $"Cabinet_{placed.Count}", pos, outward);
             if (northWest >= DrawersNorthWest && elsewhere >= DrawersElsewhere)
                 break;
         }
     }
 
-    // A cabinet with three drawer fronts; the top one ("Tray") slides out and has a floor to
-    // hold what's inside. Only the cabinet body has a collider.
-    static void BuildDrawerStandIn(Transform drawer, Material bodyMat, Material frontMat)
+    // The start room's cabinet with the flashlight and the tracker on top, to be picked up with E
+    // (GearPickup). Against the north wall right of the doorway, facing into the room. Can be
+    // re-run on its own: it replaces the old "StartGear" group.
+    public static void PlaceStartGear(Transform maze)
     {
-        Transform Part(Transform parent, string name, Vector3 position, Vector3 scale, Material mat, bool collider = false)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = position;
-            go.transform.localScale = scale;
-            go.GetComponent<Renderer>().sharedMaterial = mat;
-            if (!collider)
-                Object.DestroyImmediate(go.GetComponent<Collider>());
-            return go.transform;
-        }
+        var old = maze.Find("StartGear");
+        if (old != null)
+            Object.DestroyImmediate(old.gameObject);
+        var root = new GameObject("StartGear").transform;
+        root.SetParent(maze);
 
-        Vector3 s = DrawerSize;
-        float face = s.z / 2f;
-        Part(drawer, "Body", new Vector3(0f, s.y / 2f, 0f), s, bodyMat, collider: true);
-        foreach (var y in new[] { 0.38f, 0.15f })
-        {
-            Part(drawer, "Front", new Vector3(0f, y, face + 0.012f), new Vector3(s.x * 0.86f, 0.18f, 0.024f), frontMat);
-            Part(drawer, "Handle", new Vector3(0f, y, face + 0.035f), new Vector3(0.14f, 0.025f, 0.025f), bodyMat);
-        }
+        var start = new Vector3(Markers[0].Col * CellSize, 0f, -Markers[0].Row * CellSize);
+        var cabinet = PlaceCabinet(root, "Cabinet",
+            start + new Vector3(4f, 0f, 6f - CabinetSpec.Size.z / 2f - 0.02f), Vector3.forward);   // against the north wall
+        var model = cabinet.transform.Find("Model");
+        float top = model != null ? Bounds(model.gameObject).max.y : CabinetSpec.Size.y;
+        var across = Vector3.Cross(Vector3.up, cabinet.transform.forward);   // the cabinet's left-right
 
-        var tray = new GameObject("Tray").transform;
-        tray.SetParent(drawer, false);
-        tray.localPosition = new Vector3(0f, 0.62f, 0f);
-        Part(tray, "Front", new Vector3(0f, 0f, face + 0.012f), new Vector3(s.x * 0.86f, 0.18f, 0.024f), frontMat);
-        Part(tray, "Handle", new Vector3(0f, 0f, face + 0.035f), new Vector3(0.14f, 0.025f, 0.025f), bodyMat);
-        Part(tray, "Bottom", new Vector3(0f, -0.07f, face - 0.2f), new Vector3(s.x * 0.8f, 0.02f, 0.4f), frontMat);
-        Part(tray, "Back", new Vector3(0f, -0.02f, face - 0.39f), new Vector3(s.x * 0.8f, 0.1f, 0.02f), frontMat);
-        Part(tray, "SideL", new Vector3(-s.x * 0.39f, -0.02f, face - 0.2f), new Vector3(0.02f, 0.1f, 0.4f), frontMat);
-        Part(tray, "SideR", new Vector3(s.x * 0.39f, -0.02f, face - 0.2f), new Vector3(0.02f, 0.1f, 0.4f), frontMat);
+        AddStartRoomLight(root, start + new Vector3(0f, 0f, 2f));   // the room spans two cells north of the start one
+
+        var middle = cabinet.transform.position;
+        middle.y = top;
+        PlaceGear(root, PlayerGear.Item.Flashlight, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Props/Flashlight/Flashlight.fbx"),
+            middle - across * 0.1f, cabinet.transform.rotation);
+        PlaceGear(root, PlayerGear.Item.Tracker, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Tracker/Tracker.fbx"),
+            middle + across * 0.1f, cabinet.transform.rotation);
+    }
+
+    // The start room is the one lit place in the maze: a warm ceiling light, shadowed so it doesn't
+    // shine through the walls into the corridors around.
+    public static void AddStartRoomLight(Transform parent, Vector3 roomCentre)
+    {
+        var old = parent.Find("StartRoomLight");
+        if (old != null)
+            Object.DestroyImmediate(old.gameObject);
+        var light = new GameObject("StartRoomLight").AddComponent<Light>();
+        light.transform.SetParent(parent);
+        light.transform.position = roomCentre + Vector3.up * (WallHeight - 1f);   // well below the wall tops, so it can't be seen over them
+        light.type = LightType.Point;
+        light.range = 11f;
+        light.intensity = 10f;
+        light.color = new Color(1f, 0.85f, 0.65f);
+        light.shadows = LightShadows.Soft;
+    }
+
+    // one item lying on a surface at `spot`; a collider a little bigger than it so it's easy to aim at
+    static void PlaceGear(Transform parent, PlayerGear.Item item, GameObject asset, Vector3 spot, Quaternion facing)
+    {
+        var go = new GameObject(item == PlayerGear.Item.Flashlight ? "Flashlight_Pickup" : "Tracker_Pickup");
+        go.transform.SetParent(parent);
+        go.transform.SetPositionAndRotation(spot, facing);
+        go.AddComponent<GearPickup>().item = item;
+        if (asset == null)
+            return;
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+        model.transform.SetParent(go.transform, false);
+        // lying down: the flashlight on its side pointing along the cabinet, the tracker on its back
+        model.transform.localRotation = item == PlayerGear.Item.Flashlight
+            ? Quaternion.Euler(0f, 90f, 0f) * asset.transform.localRotation
+            : Quaternion.Euler(-90f, 0f, 0f) * Quaternion.Euler(0f, 180f, 0f) * asset.transform.localRotation;
+        var b = Bounds(model);
+        model.transform.position += new Vector3(spot.x - b.center.x, spot.y - b.min.y + 0.002f, spot.z - b.center.z);
+        foreach (var c in model.GetComponentsInChildren<Collider>())
+            Object.DestroyImmediate(c);
+        b = Bounds(model);
+        var box = go.AddComponent<BoxCollider>();
+        box.center = go.transform.InverseTransformPoint(b.center);
+        var size = go.transform.InverseTransformVector(b.size);
+        box.size = new Vector3(Mathf.Max(Mathf.Abs(size.x), 0.25f), Mathf.Max(Mathf.Abs(size.y), 0.15f), Mathf.Max(Mathf.Abs(size.z), 0.25f));
     }
 
     // Swaps a placeholder box's look for the real model when there is one. The box stays as the
@@ -399,6 +480,8 @@ public static class MazeBuilder
         {
             if (m.Name == "MonsterSpawn" && PlaceMonster(new Vector3(m.Col * CellSize, 0f, -m.Row * CellSize)))
                 continue;
+            if (m.Name == "Key_A" || m.Name == "Clue_A")
+                continue;   // no key, and the clues live in the props; the entries stay so the props keep their places
             if (m.Name == "ExitDoor" && PlaceExitHatch(markers.transform, new Vector3(m.Col * CellSize, 0f, -m.Row * CellSize)))
                 continue;
             if (m.Name == "PlayerStart")
@@ -415,6 +498,7 @@ public static class MazeBuilder
 
         PlacePropPlaceholders(root.transform);
         PlaceDrawers(root.transform);
+        PlaceStartGear(root.transform);
 
         // Dim, cold lighting for an underground space.
         RenderSettings.ambientMode = AmbientMode.Flat;

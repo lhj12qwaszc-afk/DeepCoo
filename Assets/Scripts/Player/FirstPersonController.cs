@@ -86,7 +86,7 @@ public class FirstPersonController : MonoBehaviour
         if (Cursor.lockState == CursorLockMode.Locked)
             Look(mouse.delta.ReadValue());
 
-        if (keyboard.fKey.wasPressedThisFrame && flashlight != null)
+        if (keyboard.fKey.wasPressedThisFrame && flashlight != null && PlayerGear.HasFlashlight)
             flashlight.enabled = !flashlight.enabled;
 
         bool wantsCrouch = keyboard.cKey.isPressed || keyboard.leftCtrlKey.isPressed;

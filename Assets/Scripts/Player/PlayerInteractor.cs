@@ -29,11 +29,15 @@ public class PlayerInteractor : MonoBehaviour
     Note[] notes;          // the sheets being read, if any
     int page;
 
+    // A sheet: a title and text, or (a picture hint) a row of four boxes with a picture in one.
     public struct Note
     {
         public string title;   // may be empty
         public string text;
-        public Note(string title, string text) { this.title = title; this.text = text; }
+        public Sprite picture; // set: shown in box `box` (0-3) instead of the text
+        public int box;
+        public Note(string title, string text) { this.title = title; this.text = text; picture = null; box = 0; }
+        public Note(string title, Sprite picture, int box) { this.title = title; text = ""; this.picture = picture; this.box = box; }
     }
 
     public HidingSpot HiddenIn => hiddenIn;
@@ -55,8 +59,18 @@ public class PlayerInteractor : MonoBehaviour
         leftArrow = paper.Find("LeftArrow").gameObject;
         rightArrow = paper.Find("RightArrow").gameObject;
         pageHint = paper.Find("PageHint").gameObject;
+        var row = paper.Find("Pictures");
+        if (row != null)
+        {
+            pictureRow = row.gameObject;
+            for (int i = 0; i < row.childCount; i++)
+                pictureBoxes.Add(row.GetChild(i).Find("Picture").GetComponent<UnityEngine.UI.Image>());
+        }
         noteView.SetActive(false);
     }
+
+    GameObject pictureRow;
+    readonly System.Collections.Generic.List<UnityEngine.UI.Image> pictureBoxes = new System.Collections.Generic.List<UnityEngine.UI.Image>();
 
     // Keeps the paper in step with the sheet being read.
     void LateUpdate()
@@ -69,8 +83,19 @@ public class PlayerInteractor : MonoBehaviour
         if (!show)
             return;
         bool many = notes.Length > 1;
-        noteTitle.text = notes[page].title;
-        noteBody.text = notes[page].text;
+        var sheet = notes[page];
+        noteTitle.text = sheet.title;
+        bool drawn = sheet.picture != null && pictureRow != null;
+        noteBody.text = drawn ? "" : sheet.text;
+        if (pictureRow != null)
+        {
+            pictureRow.SetActive(drawn);
+            for (int i = 0; i < pictureBoxes.Count; i++)
+            {
+                pictureBoxes[i].enabled = drawn && i == sheet.box;
+                if (drawn && i == sheet.box) pictureBoxes[i].sprite = sheet.picture;
+            }
+        }
         noteFooter.text = many ? $"{page + 1} / {notes.Length}        [E] 닫기" : "[E] 닫기";
         leftArrow.SetActive(many && page > 0);
         rightArrow.SetActive(many && page < notes.Length - 1);
@@ -104,7 +129,7 @@ public class PlayerInteractor : MonoBehaviour
         if (keyboard == null)
             return;
 
-        if (PadlockInput.IsOpen || BirdcageInspect.IsOpen)
+        if (PadlockInput.IsOpen || BirdcageInspect.IsOpen || Inventory.IsOpen)
         {
             target = null;
             usable = null;
@@ -207,7 +232,7 @@ public class PlayerInteractor : MonoBehaviour
         if (hiddenIn != null)
             DrawSlats(hiddenIn.kind);
 
-        if (PadlockInput.IsOpen || BirdcageInspect.IsOpen)
+        if (PadlockInput.IsOpen || BirdcageInspect.IsOpen || Inventory.IsOpen)
             return;   // the close-up draws itself
         if (notes != null)
             return;   // the NoteView paper is up

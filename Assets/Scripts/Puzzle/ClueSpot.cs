@@ -11,5 +11,9 @@ public class ClueSpot : Interactable
     public override string Prompt => prompt;
     public override bool CanUse => notes.Count > 0;
 
-    public override void Use(PlayerInteractor player) => player.ShowNotes(notes.ToArray());
+    public override void Use(PlayerInteractor player)
+    {
+        player.ShowNotes(notes.ToArray());
+        Inventory.Remember(notes);   // kept to read again (Tab)
+    }
 }

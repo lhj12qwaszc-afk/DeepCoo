@@ -7,6 +7,16 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: CabinetInside
+    second: {fileID: 2100000, guid: 8b38ff0a7550eb14098625f06d025b20, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: DrawerMetal
+    second: {fileID: 2100000, guid: d9d0aa6cbe93c1345b164a7be3ce2519, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: FilingCabinet_+x_board
     second: {fileID: 2100000, guid: 65515ccb3ccdf5943a7a9873175fb601, type: 2}
   - first:

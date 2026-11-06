@@ -14,17 +14,22 @@ public static class PropModels
     public static GameObject Load(string name) =>
         AssetDatabase.LoadAssetAtPath<GameObject>($"{Folder}/{name}/{name}.fbx");
 
+    // Models the game loads at run time live under Resources, laid out the same way.
+    static readonly string[] RuntimeModels = { "Assets/Resources/Tracker" };
+
     [MenuItem("DeepCoo/Set Up Prop Models")]
     public static void SetUpAll()
     {
         foreach (var dir in Directory.GetDirectories(Folder))
             SetUp(Path.GetFileName(dir));
+        foreach (var dir in RuntimeModels)
+            SetUp(Path.GetFileName(dir), Path.GetDirectoryName(dir).Replace('\\', '/'));
         AssetDatabase.SaveAssets();
     }
 
-    static void SetUp(string name)
+    static void SetUp(string name, string folder = Folder)
     {
-        string dir = $"{Folder}/{name}";
+        string dir = $"{folder}/{name}";
         string list = $"{dir}/materials.txt";
         if (!File.Exists(list) || !(AssetImporter.GetAtPath($"{dir}/{name}.fbx") is ModelImporter model))
             return;
