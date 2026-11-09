@@ -215,11 +215,13 @@ public class PlayerInteractor : MonoBehaviour
         if (hiddenIn == null)
         {
             hiddenIn = spot;
-            fps.EnterHiding(spot.InsidePoint, spot.Facing);
+            fps.EnterHiding(spot.InsidePoint, spot.Facing, spot.EyeRaise);
+            ShowInsideOf(spot, false);
         }
         else
         {
             fps.ExitHiding(spot.OutsidePoint);
+            ShowInsideOf(spot, true);
             hiddenIn = null;
         }
         if (loud)
@@ -227,8 +229,33 @@ public class PlayerInteractor : MonoBehaviour
         holdTime = 0f;
     }
 
+    // From inside, the hiding spot's own walls would show through the gaps between the slats: they
+    // aren't drawn while the player is in it (it still casts its shadow).
+    readonly System.Collections.Generic.Dictionary<Renderer, UnityEngine.Rendering.ShadowCastingMode> hiddenRenderers =
+        new System.Collections.Generic.Dictionary<Renderer, UnityEngine.Rendering.ShadowCastingMode>();
+
+    void ShowInsideOf(HidingSpot spot, bool show)
+    {
+        if (!show)
+        {
+            hiddenRenderers.Clear();
+            foreach (var r in spot.GetComponentsInChildren<Renderer>())
+            {
+                hiddenRenderers[r] = r.shadowCastingMode;
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            }
+            return;
+        }
+        foreach (var pair in hiddenRenderers)
+            if (pair.Key != null)
+                pair.Key.shadowCastingMode = pair.Value;
+        hiddenRenderers.Clear();
+    }
+
     void OnGUI()
     {
+        if (PauseMenu.IsOpen)
+            return;   // drawn over the pause menu otherwise (OnGUI is on top of every canvas)
         if (hiddenIn != null)
             DrawSlats(hiddenIn.kind);
 
@@ -276,32 +303,44 @@ public class PlayerInteractor : MonoBehaviour
 
     // Dark overlay with gaps: horizontal vents for lockers and wardrobes, a thin gap under the
     // lid for the bin.
+    public static readonly Color SlatColor = new Color(0.01f, 0.01f, 0.01f, 0.97f);
+
     static void DrawSlats(HidingSpot.Kind kind)
     {
         float W = Screen.width, H = Screen.height;
-        GUI.color = new Color(0.01f, 0.01f, 0.01f, 0.97f);
+        GUI.color = SlatColor;
+        foreach (var r in SlatRects(kind))
+            GUI.DrawTexture(new Rect(r.x * W, r.y * H, r.width * W, r.height * H), Texture2D.whiteTexture);
+        GUI.color = Color.white;
+    }
+
+    // the dark parts of the overlay as fractions of the screen (0..1, y down), also used by the
+    // pause menu to draw the same slats behind itself
+    public static System.Collections.Generic.List<Rect> SlatRects(HidingSpot.Kind kind)
+    {
+        var rects = new System.Collections.Generic.List<Rect>();
         if (kind == HidingSpot.Kind.TrashBin)
         {
-            float gapTop = H * 0.36f, gapBottom = H * 0.5f;
-            GUI.DrawTexture(new Rect(0f, 0f, W, gapTop), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(0f, gapBottom, W, H - gapBottom), Texture2D.whiteTexture);
+            float gapTop = 0.36f, gapBottom = 0.5f;
+            rects.Add(new Rect(0f, 0f, 1f, gapTop));
+            rects.Add(new Rect(0f, gapBottom, 1f, 1f - gapBottom));
         }
         else
         {
             int slats = kind == HidingSpot.Kind.Locker ? 7 : 9;
-            float top = H * (kind == HidingSpot.Kind.Locker ? 0.12f : 0.12f);
-            float bottom = H * (kind == HidingSpot.Kind.Locker ? 0.66f : 0.68f);
-            float left = W * (kind == HidingSpot.Kind.Locker ? 0.14f : 0.08f);
-            float right = W - left;
+            float top = 0.12f;
+            float bottom = kind == HidingSpot.Kind.Locker ? 0.66f : 0.68f;
+            float left = kind == HidingSpot.Kind.Locker ? 0.14f : 0.08f;
+            float right = 1f - left;
             float pitch = (bottom - top) / slats;
             float gap = pitch * 0.45f;
-            GUI.DrawTexture(new Rect(0f, 0f, W, top), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(0f, bottom, W, H - bottom), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(0f, top, left, bottom - top), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(right, top, W - right, bottom - top), Texture2D.whiteTexture);
+            rects.Add(new Rect(0f, 0f, 1f, top));
+            rects.Add(new Rect(0f, bottom, 1f, 1f - bottom));
+            rects.Add(new Rect(0f, top, left, bottom - top));
+            rects.Add(new Rect(right, top, 1f - right, bottom - top));
             for (int i = 0; i < slats; i++)
-                GUI.DrawTexture(new Rect(left, top + i * pitch + gap, right - left, pitch - gap), Texture2D.whiteTexture);
+                rects.Add(new Rect(left, top + i * pitch + gap, right - left, pitch - gap));
         }
-        GUI.color = Color.white;
+        return rects;
     }
 }

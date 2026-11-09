@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-// A handheld tracker the player starts with. M raises it into the left hand and lowers it again;
-// it can be used while walking. Its screen is a small radar, turned so "up" is the way the player
+// A handheld tracker (picked up in the start room). A right click raises it into the left hand,
+// another lowers it. It can be used while walking. Its screen is a small radar, turned so "up" is the way the player
 // faces: the maze walls around the player, the player as a green arrow in the middle, and the
 // monster as a red dot when it comes within range. No battery. One thing in hand at a time: while
 // the tracker is up the flashlight goes down and dark, and comes back as it was afterwards.
@@ -126,10 +126,13 @@ public class PositionTracker : MonoBehaviour
 
     void Update()
     {
-        var k = Keyboard.current;
-        bool busy = fps.inputLocked || Interactable.CloseUpOpen;
-        if (k != null && !busy && PlayerGear.HasTracker && k.mKey.wasPressedThisFrame)
-            held = !held;
+
+        if (fps.IsHidden)
+            held = false;   // nothing in hand while hiding: it goes down and stays down
+        bool busy = fps.inputLocked || Interactable.CloseUpOpen || fps.IsHidden;
+        var mouse = Mouse.current;
+        if (mouse != null && !busy && PlayerGear.HasTracker && mouse.rightButton.wasPressedThisFrame)
+            held = !held;   // right click raises it, right click again lowers it
         bool up = held && !busy;
 
         raised = Mathf.MoveTowards(raised, up ? 1f : 0f, RaiseSpeed * Time.deltaTime);

@@ -135,12 +135,12 @@ public class Drawer : Interactable
         main.loop = false;
         main.startLifetime = new ParticleSystem.MinMaxCurve(1.2f, 2.2f);
         main.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 5.5f);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.12f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.16f, 0.3f);
         main.startRotation3D = true;
         main.startRotationX = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
         main.startRotationY = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
         main.startRotationZ = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-        main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.12f, 0.12f, 0.13f), new Color(0.35f, 0.34f, 0.33f));
+        main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.7f, 0.7f, 0.72f), Color.white);   // tints over the feather picture
         main.gravityModifier = 0.25f;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.stopAction = ParticleSystemStopAction.Destroy;
@@ -167,12 +167,13 @@ public class Drawer : Interactable
         var stretch = ps.sizeOverLifetime;   // feathers are longer than wide
         stretch.enabled = true;
         stretch.separateAxes = true;
-        stretch.x = new ParticleSystem.MinMaxCurve(0.45f);
+        stretch.x = new ParticleSystem.MinMaxCurve(0.9f);   // the picture is 2:3; drawn a bit plumper
         stretch.y = new ParticleSystem.MinMaxCurve(1f);
         stretch.z = new ParticleSystem.MinMaxCurve(1f);
         var r = go.GetComponent<ParticleSystemRenderer>();
-        var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default");
-        r.material = new Material(shader);
+        var featherMat = Resources.Load<Material>("Feather/FeatherParticle");   // the feather picture, see-through
+        r.material = featherMat != null ? featherMat
+            : new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default"));
         r.renderMode = ParticleSystemRenderMode.Billboard;
         r.alignment = ParticleSystemRenderSpace.Local;
         ps.Play();
@@ -192,6 +193,8 @@ public class Drawer : Interactable
 
     void OnGUI()
     {
+        if (PauseMenu.IsOpen)
+            return;   // drawn over the pause menu otherwise (OnGUI is on top of every canvas)
         if (Time.time > toastUntil || Interactable.CloseUpOpen)
             return;
         var style = new GUIStyle(GUI.skin.label) { font = GameFont.Regular, fontSize = 20, alignment = TextAnchor.MiddleCenter };

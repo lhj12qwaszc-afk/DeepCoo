@@ -94,23 +94,39 @@ public class PadlockInput : Interactable
         NoiseEvents.Emit(transform.position, rattleNoiseRange);
     }
 
+    // Drawn on a 720-unit-high canvas scaled to the window, so it keeps its proportions (and
+    // doesn't spill off a small window).
+    const float RefHeight = 720f;
+    static float W, H;
+
     void OnGUI()
+    {
+        if (!escaped && !open)
+            return;
+        float k = Screen.height / RefHeight;
+        W = Screen.width / k;
+        H = RefHeight;
+        var before = GUI.matrix;
+        GUI.matrix = Matrix4x4.Scale(new Vector3(k, k, 1f));
+        Draw();
+        GUI.matrix = before;
+    }
+
+    void Draw()
     {
         if (escaped)
         {
             Shade(0.85f);
-            Label(new Rect(0f, Screen.height * 0.38f, Screen.width, 60f), "자물쇠가 풀렸다.  해치를 열고 빠져나왔다.", 34);
-            Label(new Rect(0f, Screen.height * 0.38f + 70f, Screen.width, 30f), "[R] 처음부터 다시", 20);
+            Label(new Rect(0f, H * 0.36f, W, 70f), "자물쇠가 풀렸다.  해치를 열고 빠져나왔다.", 44);   // bigger than the padlock screen's text
+            Label(new Rect(0f, H * 0.36f + 85f, W, 36f), "[R] 처음부터 다시", 26);
             return;
         }
-        if (!open)
-            return;
 
         Shade(0.6f);
         const float size = 90f, gap = 20f;
         float total = 4 * size + 3 * gap;
-        float x0 = (Screen.width - total) / 2f, y = Screen.height * 0.4f;
-        Label(new Rect(0f, y - 70f, Screen.width, 40f), "자물쇠 번호", 28);
+        float x0 = (W - total) / 2f, y = H * 0.4f;
+        Label(new Rect(0f, y - 70f, W, 40f), "자물쇠 번호", 28);
         for (int i = 0; i < 4; i++)
         {
             var r = new Rect(x0 + i * (size + gap), y, size, size);
@@ -119,16 +135,14 @@ public class PadlockInput : Interactable
             GUI.color = Color.white;
             Label(r, dials[i].ToString(), 54);
         }
-        Label(new Rect(0f, y + size + 16f, Screen.width, 26f), "A/D 자리 고르기    W/S 또는 숫자키로 돌리기", 18);
-        Label(new Rect(0f, y + size + 42f, Screen.width, 26f), "Enter 열기    Esc 그만두기", 18);
         if (Time.time < wrongUntil)
-            Label(new Rect(0f, y + size + 80f, Screen.width, 34f), "철컥!  열리지 않는다…", 26);
+            Label(new Rect(0f, y + size + 80f, W, 34f), "철컥!  열리지 않는다…", 26);
     }
 
     static void Shade(float alpha)
     {
         GUI.color = new Color(0f, 0f, 0f, alpha);
-        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(0f, 0f, W, H), Texture2D.whiteTexture);
         GUI.color = Color.white;
     }
 

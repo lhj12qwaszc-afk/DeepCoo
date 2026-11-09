@@ -53,10 +53,10 @@ public class Inventory : MonoBehaviour
             return;
         if (item == PlayerGear.Item.Flashlight)
             instance.entries.Add(new Entry { title = "손전등", icon = instance.flashlightIcon,
-                body = "어둠을 비춘다.\n배터리가 닳으면 서랍을 뒤져 새 배터리를 찾자.\n\n[F] 켜기 / 끄기" });
+                body = "어둠을 비춘다.\n배터리가 닳으면 서랍을 뒤져 새 배터리를 찾자." });
         else
             instance.entries.Add(new Entry { title = "위치 추적기", icon = instance.trackerIcon,
-                body = "주변의 벽과 내 위치(초록)를 보여준다.\n가까이 온 괴물은 빨간 점으로 나타난다.\n\n[M] 들기 / 내리기" });
+                body = "주변의 벽과 내 위치(초록)를 보여준다.\n가까이 온 괴물은 빨간 점으로 나타난다." });
     }
 
     void OnDestroy()

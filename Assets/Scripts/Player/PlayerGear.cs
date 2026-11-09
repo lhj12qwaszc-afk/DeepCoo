@@ -4,7 +4,8 @@ using UnityEngine.SceneManagement;
 // What the player carries. A run starts empty-handed: the flashlight and the tracker lie on a
 // cabinet in the start room (GearPickup) and are taken with E. Until then the flashlight hand is
 // hidden and dark (F does nothing, no battery gauge) and M does nothing. In a scene without
-// those pickups the player simply starts with both.
+// those pickups the player simply starts with both. The flashlight in hand is hidden while a
+// close-up (note, padlock, inventory) fills the screen.
 public class PlayerGear : MonoBehaviour
 {
     public enum Item { Flashlight, Tracker }
@@ -66,6 +67,24 @@ public class PlayerGear : MonoBehaviour
         else
             return;
         Inventory.AddGear(item);
+    }
+
+    // the flashlight in hand isn't drawn while a note, the padlock or the inventory fills the screen, or while hiding
+    Renderer[] handRenderers;
+    bool handShown = true;
+
+    void LateUpdate()
+    {
+        if (hand == null)
+            return;
+        bool show = !Interactable.CloseUpOpen && !fps.IsHidden;   // nothing in hand while hiding either
+        if (show == handShown)
+            return;
+        handShown = show;
+        if (handRenderers == null)
+            handRenderers = hand.GetComponentsInChildren<Renderer>(true);
+        foreach (var r in handRenderers)
+            r.enabled = show;
     }
 
     void OnDestroy()

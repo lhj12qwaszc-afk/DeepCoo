@@ -15,7 +15,7 @@ public static class PropModels
         AssetDatabase.LoadAssetAtPath<GameObject>($"{Folder}/{name}/{name}.fbx");
 
     // Models the game loads at run time live under Resources, laid out the same way.
-    static readonly string[] RuntimeModels = { "Assets/Resources/Tracker" };
+    static readonly string[] RuntimeModels = { "Assets/Resources/Tracker", "Assets/Resources/Feather" };
 
     [MenuItem("DeepCoo/Set Up Prop Models")]
     public static void SetUpAll()

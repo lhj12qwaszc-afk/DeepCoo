@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 // padlock code (1-9). E brings the cage up close against a black screen, like a note being read;
 // W/A/S/D turn it to count the feathers from every side (the mouse does nothing), E or Esc puts
 // it back. The close-up is a second camera that sees only the cage (moved to InspectLayer).
-// Feathers come from Resources/Feather if that model exists, otherwise a plain stand-in shape.
+// Feathers come from Resources/Feather/Feather if that model exists, otherwise a plain stand-in shape.
 public class BirdcageInspect : Interactable
 {
     const float FloorHeight = 0.048f;   // the cage's inner floor, as a share of the model's height (its roof is solid)
@@ -13,6 +13,9 @@ public class BirdcageInspect : Interactable
     const float ScreenShare = 0.7f;     // the upright cage, hook included, fills this much of the screen's height
     const float KeyTurnSpeed = 120f;    // degrees per second
     const int InspectLayer = 31;        // an unused layer only the close-up camera draws
+    const float FeatherLength = 0.5f;  // a feather's length, as a share of the cage's width
+    const float FeatherWiden = 1.5f;    // the feather made this much wider than the model...
+    const float FeatherThicken = 2f;    // ...and this much thicker
 
     public int Feathers { get; private set; }
 
@@ -41,20 +44,34 @@ public class BirdcageInspect : Interactable
         if (renderer == null)
             return;
         var b = renderer.bounds;
-        var prefab = Resources.Load<GameObject>("Feather");
+        var prefab = Resources.Load<GameObject>("Feather/Feather");
         float floor = b.min.y + FloorHeight * b.size.y;
         float width = Mathf.Min(b.size.x, b.size.z);
+        // spread evenly round the floor like the spokes of a wheel, so none overlap and they can be
+        // counted; each pointing outward, with a little wobble so it doesn't look laid out by hand
+        float start = Random.Range(0f, 360f);
+        float wobble = 0.25f * 360f / Mathf.Max(count, 1);
         for (int i = 0; i < count; i++)
         {
-            // around the cage floor, clear of the feeder in the middle
-            var dir = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward;
-            var pos = new Vector3(b.center.x, floor, b.center.z) + dir * Random.Range(0.25f, 1f) * FloorReach * width;
+            float heading = start + i * 360f / count + Random.Range(-wobble, wobble);
+            var dir = Quaternion.Euler(0f, heading, 0f) * Vector3.forward;
+            var pos = new Vector3(b.center.x, floor, b.center.z) + dir * (Random.Range(0.78f, 0.84f) * FloorReach * width);
             var feather = prefab != null ? Instantiate(prefab) : MakeStandInFeather();
             feather.name = "Feather";
+            // lying on the floor along its spoke, tipped a little (the model is made lying flat)
+            var turn = Quaternion.Euler(Random.Range(-8f, 8f), heading + Random.Range(-12f, 12f), Random.Range(-8f, 8f));
             feather.transform.SetPositionAndRotation(pos + Vector3.up * 0.004f,
-                Quaternion.Euler(Random.Range(-8f, 8f), Random.Range(0f, 360f), Random.Range(-8f, 8f)));
+                prefab != null ? turn * prefab.transform.rotation : turn);
             if (prefab != null)
-                feather.transform.localScale = Vector3.one * (0.35f * width / Bounds(feather).size.magnitude);
+            {
+                // FeatherLength of the cage's width long, resting on the floor
+                var fb = Bounds(feather);
+                feather.transform.localScale *= FeatherLength * width / Mathf.Max(fb.size.x, fb.size.z);
+                // plumper than the model: wider (its X) and thicker (its Z, which lies up)
+                feather.transform.localScale = Vector3.Scale(feather.transform.localScale, new Vector3(FeatherWiden, 1f, FeatherThicken));
+                fb = Bounds(feather);
+                feather.transform.position += Vector3.up * (floor + 0.002f - fb.min.y);
+            }
             feather.transform.SetParent(model, true);
             foreach (var c in feather.GetComponentsInChildren<Collider>())
                 Destroy(c);
@@ -104,7 +121,7 @@ public class BirdcageInspect : Interactable
             lamp = new GameObject("InspectLight").AddComponent<Light>();
             lamp.type = LightType.Point;
             lamp.range = 2f;
-            lamp.intensity = 1.2f;
+            lamp.intensity = 3f;
             lamp.color = new Color(1f, 0.92f, 0.8f);
             lamp.cullingMask = 1 << InspectLayer;
         }

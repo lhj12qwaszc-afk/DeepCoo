@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 // First-person movement: WASD to move, mouse to look, Shift to sprint,
-// C / Left Ctrl to crouch, F to toggle the flashlight, Esc to free the cursor.
+// C / Left Ctrl to crouch, left click to switch the flashlight on and off, Esc to free the cursor.
 // While hidden (EnterHiding) the player stands still inside the hiding spot and can only
 // turn their head a little.
 [RequireComponent(typeof(CharacterController))]
@@ -64,9 +64,10 @@ public class FirstPersonController : MonoBehaviour
         if (keyboard == null || mouse == null)
             return;
 
+        bool wasLocked = Cursor.lockState == CursorLockMode.Locked;
         if (keyboard.escapeKey.wasPressedThisFrame)
             LockCursor(false);
-        else if (mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
+        else if (mouse.leftButton.wasPressedThisFrame && !wasLocked && !PauseMenu.IsOpen)   // clicks on the pause menu keep the mouse free
             LockCursor(true);
 
         if (inputLocked)
@@ -86,7 +87,8 @@ public class FirstPersonController : MonoBehaviour
         if (Cursor.lockState == CursorLockMode.Locked)
             Look(mouse.delta.ReadValue());
 
-        if (keyboard.fKey.wasPressedThisFrame && flashlight != null && PlayerGear.HasFlashlight)
+        // left click switches the flashlight (a click that only grabs the cursor back doesn't)
+        if (mouse.leftButton.wasPressedThisFrame && wasLocked && flashlight != null && PlayerGear.HasFlashlight)
             flashlight.enabled = !flashlight.enabled;
 
         bool wantsCrouch = keyboard.cKey.isPressed || keyboard.leftCtrlKey.isPressed;
@@ -104,7 +106,7 @@ public class FirstPersonController : MonoBehaviour
     }
 
     // Steps inside a hiding spot: the player's feet go to standPoint, facing out of the spot.
-    public void EnterHiding(Vector3 standPoint, Quaternion facing)
+    public void EnterHiding(Vector3 standPoint, Quaternion facing, float eyeRaise = 0f)
     {
         IsHidden = true;
         IsCrouching = false;
@@ -115,7 +117,7 @@ public class FirstPersonController : MonoBehaviour
         pitch = 0f;
         cameraRoot.localRotation = Quaternion.identity;
         var eye = cameraRoot.localPosition;
-        eye.y = standEyeHeight;
+        eye.y = standEyeHeight + eyeRaise;
         cameraRoot.localPosition = eye;
         if (flashlight != null)
         {

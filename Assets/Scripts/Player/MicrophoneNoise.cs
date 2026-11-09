@@ -47,7 +47,8 @@ public class MicrophoneNoise : MonoBehaviour
         if (Keyboard.current != null && Keyboard.current.mKey.wasPressedThisFrame)
             muted = !muted;
 
-        float raw = muted ? 0f : testLevel >= 0f ? testLevel : ReadMicLevel();
+        quietDb = GameSettings.MicQuietDb;   // sensitivity from the settings panel
+        float raw = muted || !GameSettings.MicOn ? 0f : testLevel >= 0f ? testLevel : ReadMicLevel();
         // rise fast, fall slowly, so a shout lingers on the meter
         Level = raw > Level ? raw : Mathf.MoveTowards(Level, raw, Time.deltaTime * 1.5f);
         HearingRange = Level > 0f ? Mathf.Lerp(minRange, maxRange, Level) : 0f;
@@ -78,6 +79,8 @@ public class MicrophoneNoise : MonoBehaviour
 
     void OnGUI()
     {
+        if (PauseMenu.IsOpen)
+            return;   // drawn over the pause menu otherwise (OnGUI is on top of every canvas)
         if (Interactable.CloseUpOpen)
             return;
         const float x = 110f, w = 60f, h = 10f;
@@ -91,7 +94,7 @@ public class MicrophoneNoise : MonoBehaviour
             return;
         }
         GUI.color = new Color(1f, 1f, 1f, 0.6f);
-        GUI.Label(new Rect(x, top - 4f, 40f, 22f), muted ? "끔" : "MIC", style);
+        GUI.Label(new Rect(x, top - 4f, 40f, 22f), muted || !GameSettings.MicOn ? "끔" : "MIC", style);
         GUI.color = new Color(0f, 0f, 0f, 0.6f);
         GUI.DrawTexture(new Rect(x + 30f, top, w, h), Texture2D.whiteTexture);
         // red once it is loud enough for the monster to hear

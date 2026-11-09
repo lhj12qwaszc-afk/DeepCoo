@@ -89,7 +89,9 @@ public class PuzzleManager : MonoBehaviour
         if (choices.Length == 0)
             return null;
         var tex = choices[Random.Range(0, choices.Length)];
-        return Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        var sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        sprite.name = tex.name;   // the note view darkens some drawings by name
+        return sprite;
     }
 
     // Where the sheets go: see below.

@@ -39,4 +39,7 @@ public class HidingSpot : MonoBehaviour
     }
 
     public Quaternion Facing => Quaternion.LookRotation(transform.forward, Vector3.up);
+
+    // How much higher than standing the eye sits inside (peering out under the bin's lid).
+    public float EyeRaise => kind == Kind.TrashBin ? 0.35f : 0f;
 }
