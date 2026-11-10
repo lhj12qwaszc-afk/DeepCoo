@@ -124,8 +124,9 @@ public class PuzzleManager : MonoBehaviour
             spot.notes.Add(note);
         }
 
-        // Each hint is written out or drawn (a picture of the source in the digit's box of four),
-        // picked anew each run but always some of each. Written hints go on the board (first and
+        // Each hint is written out or drawn (a picture of the source in the digit's box of four);
+        // the board's two are always written, the cabinets' two picked anew each run (at least one drawn).
+        // Written hints go on the board (first and
         // second digits) and in a drawer of filing cabinet 1 (third) and 2 (fourth); drawn hints
         // and the number note each lie in some other drawer, picked anew each run among those
         // without a battery (no free drawer left: they go with the written ones).
@@ -133,7 +134,15 @@ public class PuzzleManager : MonoBehaviour
         var drawn = new bool[4];
         for (int i = 0; i < 4; i++)
             drawn[i] = Random.value < 0.5f;
-        if (System.Array.TrueForAll(drawn, d => d) || System.Array.TrueForAll(drawn, d => !d))
+        if (boards.Count > 0)
+        {
+            // the board's hints (first and second) are always written, so the board is never bare;
+            // of the cabinets' two at least one is drawn, so there's always a picture to find
+            drawn[0] = drawn[1] = false;
+            if (!drawn[2] && !drawn[3])
+                drawn[Random.Range(2, 4)] = true;
+        }
+        else if (System.Array.TrueForAll(drawn, d => d) || System.Array.TrueForAll(drawn, d => !d))
         {
             int flip = Random.Range(0, 4);
             drawn[flip] = !drawn[flip];
@@ -149,7 +158,7 @@ public class PuzzleManager : MonoBehaviour
         }
 
         var drawers = new List<Drawer>(FindObjectsByType<Drawer>(FindObjectsSortMode.None));
-        drawers.RemoveAll(d => !Free(d) || cabinets.Exists(c => d.transform.IsChildOf(c)));
+        drawers.RemoveAll(d => !Free(d) || d.InStartRoom || cabinets.Exists(c => d.transform.IsChildOf(c)));
         for (int i = drawers.Count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);

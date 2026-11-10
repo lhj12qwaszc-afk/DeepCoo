@@ -13,6 +13,7 @@ public class BatterySpawner : MonoBehaviour
     void Start()
     {
         var all = new List<Drawer>(FindObjectsByType<Drawer>(FindObjectsSortMode.None));
+        all.RemoveAll(d => d.InStartRoom);   // the start room's cabinet only holds the flashlight and tracker on top
         Shuffle(all);
         for (int i = 0; i < drawersWithScare && i < all.Count; i++)
             all[i].scare = true;

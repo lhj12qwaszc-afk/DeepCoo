@@ -9,7 +9,7 @@ public static class MazeLayout
     // Row 0 is the north edge (top of the floor plan).
     public static readonly string[] Rows =
     {
-        "#####.#.#.###.#.#.#.#",   // (19,4) opened: a way through on the east side
+        "#####################",
         "#.......#...........#",
         "#######.###.#######.#",
         "#.....#.....#...#...#",
@@ -32,7 +32,7 @@ public static class MazeLayout
         "##S##################",
         "#SSS#################",
         "#SSS#################",
-        "#####.#.#.###.#.#.#.#",   // (19,4) opened: a way through on the east side
+        "#####################",
     };
 
     public const float CellSize = 4f;

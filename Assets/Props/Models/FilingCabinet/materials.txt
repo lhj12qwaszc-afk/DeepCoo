@@ -1,7 +1,6 @@
-material_0.003|FilingCabinet_0_base.png|FilingCabinet_0_normal.png|1,1,1
-FilingCabinet_-x_board|FilingCabinet_1_base.png||1,1,1
-FilingCabinet_+x_board|FilingCabinet_2_base.png||1,1,1
-FilingCabinet_+y_board|FilingCabinet_3_base.png||1,1,1
-FilingCabinet_+z_board|FilingCabinet_4_base.png||1,1,1
+FC_body|FilingCabinet_body_base.png|FilingCabinet_body_normal.png|1,1,1
+FC_side|FilingCabinet_side_base.png||1,1,1
+FC_top|FilingCabinet_top_base.png||1,1,1
 CabinetInside|||0.020,0.020,0.020
 DrawerMetal|||0.160,0.170,0.150
+FC_handle|FilingCabinet_handle_base.png|FilingCabinet_handle_normal.png|1,1,1

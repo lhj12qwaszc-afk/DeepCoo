@@ -8,37 +8,57 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: CabinetInside
-    second: {fileID: 2100000, guid: 8b38ff0a7550eb14098625f06d025b20, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: DrawerMetal
-    second: {fileID: 2100000, guid: d9d0aa6cbe93c1345b164a7be3ce2519, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: FilingCabinet_+x_board
-    second: {fileID: 2100000, guid: 65515ccb3ccdf5943a7a9873175fb601, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: FilingCabinet_+y_board
     second: {fileID: 2100000, guid: 808d69f3759218d4ca24230246060d41, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: FilingCabinet_+z_board
+      name: DrawerMetal
     second: {fileID: 2100000, guid: a809a0cdd3773e34a8544ba1045de8e4, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: FilingCabinet_-x_board
+      name: FC_body
+    second: {fileID: 2100000, guid: 0d4445fa17c27194e8e3f2d9e5c2f749, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: FC_handle
+    second: {fileID: 2100000, guid: 8b38ff0a7550eb14098625f06d025b20, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: FC_side
     second: {fileID: 2100000, guid: 3a8b8d7061492af45a63a939fc0405c5, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: FC_top
+    second: {fileID: 2100000, guid: 65515ccb3ccdf5943a7a9873175fb601, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: FilingCabinet_+x_board
+    second: {instanceID: 0}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: FilingCabinet_+y_board
+    second: {instanceID: 0}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: FilingCabinet_+z_board
+    second: {instanceID: 0}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: FilingCabinet_-x_board
+    second: {instanceID: 0}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: material_0.003
-    second: {fileID: 2100000, guid: 0d4445fa17c27194e8e3f2d9e5c2f749, type: 2}
+    second: {instanceID: 0}
   materials:
     materialImportMode: 2
     materialName: 0

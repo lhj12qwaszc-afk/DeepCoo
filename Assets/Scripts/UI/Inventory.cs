@@ -119,6 +119,34 @@ public class Inventory : MonoBehaviour
         }
     }
 
+    readonly Dictionary<Sprite, Sprite> whiteLines = new Dictionary<Sprite, Sprite>();
+
+    // the drawing with its colours turned around (dark lines become light), its see-through parts kept;
+    // made once per drawing (copied through the GPU, so the texture needn't be readable)
+    Sprite WhiteLines(Sprite drawing)
+    {
+        if (whiteLines.TryGetValue(drawing, out var done))
+            return done;
+        var src = drawing.texture;
+        var rt = RenderTexture.GetTemporary(src.width, src.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+        Graphics.Blit(src, rt);
+        var previous = RenderTexture.active;
+        RenderTexture.active = rt;
+        var tex = new Texture2D(src.width, src.height, TextureFormat.RGBA32, false);
+        tex.ReadPixels(new Rect(0, 0, src.width, src.height), 0, 0);
+        RenderTexture.active = previous;
+        RenderTexture.ReleaseTemporary(rt);
+        var px = tex.GetPixels32();
+        for (int i = 0; i < px.Length; i++)
+            px[i] = new Color32((byte)(255 - px[i].r), (byte)(255 - px[i].g), (byte)(255 - px[i].b), px[i].a);
+        tex.SetPixels32(px);
+        tex.Apply();
+        var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        sprite.name = drawing.name + "_white";
+        whiteLines[drawing] = sprite;
+        return sprite;
+    }
+
     void Update()
     {
         var k = Keyboard.current;
@@ -179,7 +207,8 @@ public class Inventory : MonoBehaviour
         }
         bool any = selected < entries.Count;
         detailIcon.enabled = any;
-        if (any) detailIcon.sprite = entries[selected].picture != null ? entries[selected].picture : entries[selected].icon;
+        // a drawn hint is dark pencil on clear: here it's shown in white lines so it reads on the dark panel
+        if (any) detailIcon.sprite = entries[selected].picture != null ? WhiteLines(entries[selected].picture) : entries[selected].icon;
         detailTitle.text = any ? entries[selected].title : "";
         detailBody.text = any ? entries[selected].body : "";
     }

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// One drawer of a filing cabinet (the model's Drawer_1..4; they all open on their own). E pulls it
+// One drawer of a filing cabinet (the model's Drawer_1, Drawer_2...; they all open on their own). E pulls it
 // out; if a spare battery was put in it (BatterySpawner picks a few drawers each run) E again takes
 // it and tops up the flashlight; if the puzzle put a sheet in it (a hint, a drawn hint or the
 // crumpled number note; never with a battery) E reads it, and it's kept in the inventory. Once
@@ -32,6 +32,17 @@ public class Drawer : Interactable
 
     public bool HasBattery => battery != null;
     public bool HasNote => paper != null;
+
+    // the start room's cabinet (under "StartGear"): its drawers always stay empty
+    public bool InStartRoom
+    {
+        get
+        {
+            for (var t = transform; t != null; t = t.parent)
+                if (t.name == "StartGear") return true;
+            return false;
+        }
+    }
 
     public override string Prompt =>
         !open ? "서랍 열기" : battery != null ? "배터리 꺼내기" : paper != null ? "쪽지 읽기" : "서랍 닫기";
@@ -124,6 +135,7 @@ public class Drawer : Interactable
     // dark feathers bursting out of the drawer up into the player's face (stand-in particles)
     void Burst(PlayerInteractor player)
     {
+        if (Sfx.Bank != null) Sfx.Play(Sfx.Bank.scareFlap, transform.position, 1f);
         var go = new GameObject("FeatherBurst");
         go.transform.position = floor.position + Outward() * slide + Vector3.up * 0.1f;
         var toEye = player.GetComponent<FirstPersonController>().cameraRoot.position - go.transform.position;

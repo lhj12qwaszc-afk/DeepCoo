@@ -43,6 +43,11 @@ public static class MazeBuilder
         new Marker { Name = "ExitDoor",       Col = 19.5f, Row = 1.5f,  Color = new Color(0.2f, 0.9f, 0.4f),  Shape = PrimitiveType.Cube },
     };
 
+    // The two-drawer filing cabinet stands 1.2 m tall (the model then reaches 1.1 m out from the wall);
+    // its placement box is 0.65 deep so it sits 0.325 m off
+    // the wall (declared before PropSpecs, which use it).
+    static readonly Vector3 CabinetSize = new Vector3(0.56f, 1.2f, 0.65f);
+
     // Placeholder boxes for furniture whose models aren't made yet: real-world size, standing
     // against a wall and facing into the corridor. Swap in the real models later.
     struct PropSpec
@@ -65,7 +70,7 @@ public static class MazeBuilder
         new PropSpec { Name = "Locker",        Count = 5, Size = new Vector3(0.6f, 2.25f, 0.6f),   Color = HideColor },
         new PropSpec { Name = "Wardrobe",      Count = 3, Size = new Vector3(1.35f, 2.25f, 0.68f), Color = HideColor },
         new PropSpec { Name = "TrashBin",      Count = 3, Size = new Vector3(1.88f, 2.25f, 1.5f),  Color = HideColor },
-        new PropSpec { Name = "FilingCabinet", Count = 2, Size = new Vector3(0.5f, 1.35f, 0.65f),  Color = ClueColor },
+        new PropSpec { Name = "FilingCabinet", Count = 2, Size = CabinetSize,                     Color = ClueColor },
         new PropSpec { Name = "CorkBoard",     Count = 1, Size = new Vector3(1.2f, 0.9f, 0.05f),   Elevation = 1.1f, Color = ClueColor },
         new PropSpec { Name = "PipeGauge",     Count = 2, Size = new Vector3(1.0f, 0.5f, 0.3f),    Elevation = 0.9f, Color = PuzzleColor },
         new PropSpec { Name = "Birdcage",      Count = 2, Size = new Vector3(0.5f, 0.7f, 0.5f),    Elevation = 1.3f, Color = PuzzleColor, Hanging = true },
@@ -145,10 +150,10 @@ public static class MazeBuilder
     const int DrawersNorthWest = 5;
     const int DrawersElsewhere = 3;
     const int DrawerSpacing = 3;   // cells between any two cabinets
-    static readonly PropSpec CabinetSpec = new PropSpec { Name = "FilingCabinet", Size = new Vector3(0.5f, 1.35f, 0.65f), Color = ClueColor };
+    static readonly PropSpec CabinetSpec = new PropSpec { Name = "FilingCabinet", Size = CabinetSize, Color = ClueColor };
 
     // A filing cabinet against the wall at `pos` (its back on the wall, facing away from `outward`),
-    // the model in place and all four drawers working.
+    // the model in place and its drawers working.
     static GameObject PlaceCabinet(Transform parent, string name, Vector3 pos, Vector3 outward)
     {
         var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -163,7 +168,7 @@ public static class MazeBuilder
         return box;
     }
 
-    // The cabinet model's Drawer_1..4 each get a Drawer and a collider of their own, standing a
+    // The cabinet model's Drawer_1, Drawer_2... each get a Drawer and a collider of their own, standing a
     // little proud of the front so the look ray picks the drawer, not the body; the body gets a
     // collider to bump into instead of the placeholder box.
     public static void MakeDrawersOpen(Transform holder)
@@ -198,6 +203,43 @@ public static class MazeBuilder
             col.size = b.size + new Vector3(Mathf.Abs(proud.x), Mathf.Abs(proud.y), Mathf.Abs(proud.z));
             drawer.gameObject.AddComponent<Drawer>();
         }
+    }
+
+    // Puts the current FilingCabinet model into every cabinet already in the open scene, where it
+    // stands now (cabinets moved by hand stay put): the old model goes, the new one is fitted
+    // against the same wall and its drawers made to open. The start room's flashlight and tracker
+    // move down or up with the cabinet's top.
+    [MenuItem("DeepCoo/Replace Filing Cabinet Models")]
+    public static void ReplaceCabinetModels()
+    {
+        var asset = PropModels.Load(CabinetSpec.Name);
+        if (asset == null)
+            return;
+        var holders = new System.Collections.Generic.HashSet<Transform>();
+        foreach (var drawer in Object.FindObjectsByType<Drawer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            var m = drawer.transform.parent;
+            if (m != null && m.name == "Model" && m.parent != null)
+                holders.Add(m.parent);
+        }
+        int count = 0;
+        foreach (var holder in holders)
+        {
+            Object.DestroyImmediate(holder.Find("Model").gameObject);
+            PlaceModel(holder.gameObject, CabinetSpec, -holder.forward);   // the back is on the wall behind
+            MakeDrawersOpen(holder);
+            float newTop = Bounds(holder.Find("Model").gameObject).max.y;
+            if (holder.parent != null)
+                foreach (var pickup in holder.parent.GetComponentsInChildren<GearPickup>(true))
+                {
+                    // lay it on the new top (its model's underside just above it)
+                    float bottom = Bounds(pickup.gameObject).min.y;
+                    pickup.transform.position += Vector3.up * (newTop + 0.002f - bottom);
+                }
+            count++;
+        }
+        UnityEditor.SceneManagement.EditorSceneManager.MarkAllScenesDirty();
+        Debug.Log($"[MazeBuilder] filing cabinets replaced: {count}");
     }
 
     static bool InNorthWest(Vector3 p) => p.x < 56f && p.z > -38f;
@@ -282,12 +324,12 @@ public static class MazeBuilder
 
         AddStartRoomLight(root, start + new Vector3(0f, 0f, 2f));   // the room spans two cells north of the start one
 
-        var middle = cabinet.transform.position;
+        var middle = model != null ? Bounds(model.gameObject).center : cabinet.transform.position;   // the middle of the top
         middle.y = top;
         PlaceGear(root, PlayerGear.Item.Flashlight, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Props/Flashlight/Flashlight.fbx"),
-            middle - across * 0.1f, cabinet.transform.rotation);
+            middle - across * 0.2f, cabinet.transform.rotation);   // side by side
         PlaceGear(root, PlayerGear.Item.Tracker, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/Tracker/Tracker.fbx"),
-            middle + across * 0.1f, cabinet.transform.rotation);
+            middle + across * 0.2f, cabinet.transform.rotation);
     }
 
     // The start room is the one lit place in the maze: a warm ceiling light, shadowed so it doesn't
@@ -308,6 +350,8 @@ public static class MazeBuilder
     }
 
     // one item lying on a surface at `spot`; a collider a little bigger than it so it's easy to aim at
+    const float GearScale = 1.6f;
+
     static void PlaceGear(Transform parent, PlayerGear.Item item, GameObject asset, Vector3 spot, Quaternion facing)
     {
         var go = new GameObject(item == PlayerGear.Item.Flashlight ? "Flashlight_Pickup" : "Tracker_Pickup");
@@ -318,10 +362,11 @@ public static class MazeBuilder
             return;
         var model = (GameObject)PrefabUtility.InstantiatePrefab(asset);
         model.transform.SetParent(go.transform, false);
-        // lying down: the flashlight on its side pointing along the cabinet, the tracker on its back
+        // lying down, both lengthwise toward the room: the flashlight on its side, the tracker on its back
         model.transform.localRotation = item == PlayerGear.Item.Flashlight
-            ? Quaternion.Euler(0f, 90f, 0f) * asset.transform.localRotation
+            ? asset.transform.localRotation   // pointing out toward the room
             : Quaternion.Euler(-90f, 0f, 0f) * Quaternion.Euler(0f, 180f, 0f) * asset.transform.localRotation;
+        model.transform.localScale *= GearScale;   // bigger than life so they read from across the room
         var b = Bounds(model);
         model.transform.position += new Vector3(spot.x - b.center.x, spot.y - b.min.y + 0.002f, spot.z - b.center.z);
         foreach (var c in model.GetComponentsInChildren<Collider>())
@@ -349,7 +394,7 @@ public static class MazeBuilder
             Quaternion.LookRotation(-outward, Vector3.up) * asset.transform.localRotation);
         var size = Bounds(model).size;
         float scale = Mathf.Max(spec.Size.x, spec.Size.y, spec.Size.z) / Mathf.Max(size.x, size.y, size.z);
-        model.transform.localScale = Vector3.one * scale;
+        model.transform.localScale *= scale;   // on top of the import's own scale (some come in at 100)
 
         var bounds = Bounds(model);
         var wall = box.transform.position + outward * (spec.Size.z / 2f);

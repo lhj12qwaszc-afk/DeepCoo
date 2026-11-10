@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// A birdcage with some feathers lying on its floor; how many there are is one digit of the
+// A birdcage with some feathers in it (up to four on the floor, the rest stuck in the bars); how many there are is one digit of the
 // padlock code (1-9). E brings the cage up close against a black screen, like a note being read;
 // W/A/S/D turn it to count the feathers from every side (the mouse does nothing), E or Esc puts
 // it back. The close-up is a second camera that sees only the cage (moved to InspectLayer).
@@ -9,11 +9,9 @@ using UnityEngine.InputSystem;
 public class BirdcageInspect : Interactable
 {
     const float FloorHeight = 0.048f;   // the cage's inner floor, as a share of the model's height (its roof is solid)
-    const float FloorReach = 0.3f;      // how far from the centre feathers lie, as a share of its width
     const float ScreenShare = 0.7f;     // the upright cage, hook included, fills this much of the screen's height
     const float KeyTurnSpeed = 120f;    // degrees per second
     const int InspectLayer = 31;        // an unused layer only the close-up camera draws
-    const float FeatherLength = 0.5f;  // a feather's length, as a share of the cage's width
     const float FeatherWiden = 1.5f;    // the feather made this much wider than the model...
     const float FeatherThicken = 2f;    // ...and this much thicker
 
@@ -36,6 +34,10 @@ public class BirdcageInspect : Interactable
 
     public override string Prompt => "새장 들여다보기";
 
+    // how the feathers are arranged (being chosen): 1 all on the floor, 2 floor + standing inside the
+    // bars, 3 floor + poked through the bars, 4 floor + both
+    public static int Style = 4;
+
     public void SetFeathers(int count)
     {
         Feathers = count;
@@ -44,38 +46,125 @@ public class BirdcageInspect : Interactable
         if (renderer == null)
             return;
         var b = renderer.bounds;
-        var prefab = Resources.Load<GameObject>("Feather/Feather");
         float floor = b.min.y + FloorHeight * b.size.y;
         float width = Mathf.Min(b.size.x, b.size.z);
-        // spread evenly round the floor like the spokes of a wheel, so none overlap and they can be
-        // counted; each pointing outward, with a little wobble so it doesn't look laid out by hand
-        float start = Random.Range(0f, 360f);
-        float wobble = 0.25f * 360f / Mathf.Max(count, 1);
-        for (int i = 0; i < count; i++)
+        var centre = new Vector3(b.center.x, floor, b.center.z);
+
+        // At most four lie on the floor, one in each quarter so none touch; from five on, the rest
+        // are stuck upright between the bars round the sides. Every feather stands apart to be counted.
+        int onFloor = Style == 1 ? count : Mathf.Min(count, 4);
+        int inBars = count - onFloor;
+
+        if (Style == 1)
         {
-            float heading = start + i * 360f / count + Random.Range(-wobble, wobble);
-            var dir = Quaternion.Euler(0f, heading, 0f) * Vector3.forward;
-            var pos = new Vector3(b.center.x, floor, b.center.z) + dir * (Random.Range(0.78f, 0.84f) * FloorReach * width);
-            var feather = prefab != null ? Instantiate(prefab) : MakeStandInFeather();
-            feather.name = "Feather";
-            // lying on the floor along its spoke, tipped a little (the model is made lying flat)
-            var turn = Quaternion.Euler(Random.Range(-8f, 8f), heading + Random.Range(-12f, 12f), Random.Range(-8f, 8f));
-            feather.transform.SetPositionAndRotation(pos + Vector3.up * 0.004f,
-                prefab != null ? turn * prefab.transform.rotation : turn);
-            if (prefab != null)
+            // all on the floor, smaller, one per spot of a 3x3 grid so none touch
+            var spots = new System.Collections.Generic.List<Vector2>();
+            for (int gx = -1; gx <= 1; gx++) for (int gz = -1; gz <= 1; gz++) spots.Add(new Vector2(gx, gz));
+            for (int i = spots.Count - 1; i > 0; i--) { int j = Random.Range(0, i + 1); (spots[i], spots[j]) = (spots[j], spots[i]); }
+            for (int i = 0; i < count; i++)
             {
-                // FeatherLength of the cage's width long, resting on the floor
-                var fb = Bounds(feather);
-                feather.transform.localScale *= FeatherLength * width / Mathf.Max(fb.size.x, fb.size.z);
-                // plumper than the model: wider (its X) and thicker (its Z, which lies up)
-                feather.transform.localScale = Vector3.Scale(feather.transform.localScale, new Vector3(FeatherWiden, 1f, FeatherThicken));
-                fb = Bounds(feather);
-                feather.transform.position += Vector3.up * (floor + 0.002f - fb.min.y);
+                var s = spots[i];
+                var pos = centre + new Vector3(s.x * 0.25f * b.size.x + Random.Range(-0.02f, 0.02f), 0f, s.y * 0.25f * b.size.z + Random.Range(-0.02f, 0.02f));
+                var feather = MakeFeather(0.22f * width);
+                feather.transform.rotation = Quaternion.Euler(Random.Range(-6f, 6f), Random.Range(0f, 360f), Random.Range(-6f, 6f)) * feather.transform.rotation;
+                Place(feather, pos, floor);
+                feather.transform.SetParent(model, true);
             }
-            feather.transform.SetParent(model, true);
-            foreach (var c in feather.GetComponentsInChildren<Collider>())
-                Destroy(c);
+            return;
         }
+
+        var quarters = new System.Collections.Generic.List<Vector2> { new(-1, -1), new(1, -1), new(-1, 1), new(1, 1) };
+        for (int i = quarters.Count - 1; i > 0; i--) { int j = Random.Range(0, i + 1); (quarters[i], quarters[j]) = (quarters[j], quarters[i]); }
+        for (int i = 0; i < onFloor; i++)
+        {
+            var q = quarters[i];
+            var pos = centre + new Vector3(q.x * 0.22f * b.size.x, 0f, q.y * 0.22f * b.size.z);
+            var feather = MakeFeather(FloorLength * width);
+            // lying flat, turned any which way
+            feather.transform.rotation = Quaternion.Euler(Random.Range(-6f, 6f), Random.Range(0f, 360f), Random.Range(-6f, 6f)) * feather.transform.rotation;
+            Place(feather, pos, floor);
+            feather.transform.SetParent(model, true);
+        }
+
+        // round the inside of the cage's sides, evenly spaced, starting anywhere
+        float px = b.size.x * 0.34f, pz = b.size.z * 0.34f;   // just inside the bars
+        float perimeter = 4f * (px + pz);
+        float offset = Random.Range(0f, perimeter);
+        for (int i = 0; i < inBars; i++)
+        {
+            float t = (offset + i * perimeter / inBars) % perimeter;
+            Vector3 spot, outward;
+            if (t < 2f * px) { spot = new Vector3(-px + t, 0f, -pz); outward = Vector3.back; }
+            else if ((t -= 2f * px) < 2f * pz) { spot = new Vector3(px, 0f, -pz + t); outward = Vector3.right; }
+            else if ((t -= 2f * pz) < 2f * px) { spot = new Vector3(px - t, 0f, pz); outward = Vector3.forward; }
+            else { t -= 2f * px; spot = new Vector3(-px, 0f, pz - t); outward = Vector3.left; }
+            var feather = MakeFeather(BarLength * width);
+            var pos = centre + spot + Vector3.up * (Random.Range(0.32f, 0.45f) * b.size.y);
+            bool poke = Style == 3 || (Style == 4 && i % 2 == 0);   // style 2: none poked through
+            if (poke)
+            {
+                // every other one is poked through a gap between the bars, half in and half out
+                PokeThrough(feather, outward);
+                pos += outward * (BarsAt - 0.34f) * (outward.x != 0f ? b.size.x : b.size.z);
+            }
+            else
+                StandUp(feather, outward);   // the rest stand just inside the bars
+            feather.transform.position = pos - (Bounds(feather).center - feather.transform.position);
+            feather.transform.SetParent(model, true);
+        }
+    }
+
+    const float FloorLength = 0.32f;   // a feather on the floor, as a share of the cage's width
+    const float BarLength = 0.45f;     // a feather stuck in the bars
+    const float BarsAt = 0.44f;        // the bars, as a share of the cage's size out from its middle
+
+    // turn a flat-lying feather so it pokes out through the bars: pointing outward and a little
+    // up, its flat face turned sideways so it slips between two bars
+    static void PokeThrough(GameObject feather, Vector3 outward)
+    {
+        var fb = Bounds(feather);
+        var along = fb.size.x >= fb.size.z ? Vector3.right : Vector3.forward;   // its length, lying down
+        var point = Quaternion.FromToRotation(along, outward);
+        var sideways = Quaternion.AngleAxis(90f, outward);                      // face to the side
+        var up = Quaternion.AngleAxis(-Random.Range(15f, 30f), Vector3.Cross(Vector3.up, outward));
+        feather.transform.rotation = up * sideways * point * feather.transform.rotation;
+    }
+
+    // one feather lying flat, `length` long, plumper than the model
+    GameObject MakeFeather(float length)
+    {
+        var prefab = Resources.Load<GameObject>("Feather/Feather");
+        var feather = prefab != null ? Instantiate(prefab) : MakeStandInFeather();
+        feather.name = "Feather";
+        if (prefab != null)
+        {
+            feather.transform.rotation = prefab.transform.rotation;
+            var fb = Bounds(feather);
+            feather.transform.localScale *= length / Mathf.Max(fb.size.x, fb.size.z);
+            feather.transform.localScale = Vector3.Scale(feather.transform.localScale, new Vector3(FeatherWiden, 1f, FeatherThicken));
+        }
+        foreach (var c in feather.GetComponentsInChildren<Collider>())
+            Destroy(c);
+        return feather;
+    }
+
+    // rest it on the floor at `pos`
+    static void Place(GameObject feather, Vector3 pos, float floor)
+    {
+        var fb = Bounds(feather);
+        feather.transform.position += new Vector3(pos.x - fb.center.x, floor + 0.002f - fb.min.y, pos.z - fb.center.z);
+    }
+
+    // turn a flat-lying feather to stand on end, its face to the outside, leaning a little
+    static void StandUp(GameObject feather, Vector3 outward)
+    {
+        var fb = Bounds(feather);
+        var along = fb.size.x >= fb.size.z ? Vector3.right : Vector3.forward;   // its length, lying down
+        var rise = Quaternion.FromToRotation(along, Vector3.up);
+        var face = rise * Vector3.up;                                          // where its flat face looks now
+        var turn = Quaternion.FromToRotation(Vector3.ProjectOnPlane(face, Vector3.up).normalized, outward);
+        var lean = Quaternion.AngleAxis(Random.Range(-15f, 15f), outward) * Quaternion.AngleAxis(-12f, Vector3.Cross(Vector3.up, outward));
+        feather.transform.rotation = lean * turn * rise * feather.transform.rotation;
     }
 
     static GameObject MakeStandInFeather()

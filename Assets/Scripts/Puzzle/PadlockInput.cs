@@ -86,11 +86,13 @@ public class PadlockInput : Interactable
         if (puzzle != null && string.Concat(dials) == puzzle.CodeText)
         {
             escaped = true;
+            if (Sfx.Bank != null) Sfx.Play(Sfx.Bank.padlockOpen);
             SetOpen(false);
             Time.timeScale = 0f;   // the monster stops too
             return;
         }
         wrongUntil = Time.time + 2f;
+        if (Sfx.Bank != null) Sfx.Play(Sfx.Bank.padlockWrong, transform.position, 0.9f);
         NoiseEvents.Emit(transform.position, rattleNoiseRange);
     }
 

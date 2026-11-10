@@ -51,11 +51,19 @@ public class FlashlightBattery : MonoBehaviour
         flashlight.intensity = baseIntensity * level;
     }
 
+    FirstPersonController fps;
+
+    bool Hidden()
+    {
+        if (fps == null) fps = GetComponentInParent<FirstPersonController>() ?? FindFirstObjectByType<FirstPersonController>();
+        return fps != null && fps.IsHidden;
+    }
+
     void OnGUI()
     {
         if (PauseMenu.IsOpen)
             return;   // drawn over the pause menu otherwise (OnGUI is on top of every canvas)
-        if (Interactable.CloseUpOpen || PositionTracker.InView || !PlayerGear.HasFlashlight)   // the tracker covers this corner; no flashlight yet
+        if (Interactable.CloseUpOpen || PositionTracker.InView || !PlayerGear.HasFlashlight || Hidden())   // the tracker covers this corner; no flashlight yet; nothing in hand while hiding
             return;
         const float x = 20f, y = 20f, w = 70f, h = 18f;
         float top = Screen.height - y - h;

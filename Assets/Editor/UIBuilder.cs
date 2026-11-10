@@ -34,7 +34,7 @@ public static class UIBuilder
         var previous = EditorSceneManager.GetActiveScene().path;
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        var cam = new GameObject("Main Camera", typeof(Camera)).GetComponent<Camera>();
+        var cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)).GetComponent<Camera>();
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Color.black;
         cam.tag = "MainCamera";
@@ -235,7 +235,7 @@ public static class UIBuilder
         MakeRowLabel(panel, name, label, y);
         var root = new GameObject(name, typeof(RectTransform), typeof(Slider)).GetComponent<RectTransform>();
         root.SetParent(panel, false);
-        Place(root, new Vector2(0.5f, 0.5f), new Vector2(170f, y), new Vector2(570f, 190f));   // picture shape 3:1
+        Place(root, new Vector2(0.5f, 0.5f), new Vector2(120f, y), new Vector2(690f, 230f));   // picture shape 3:1
 
         var track = MakeImage(root, "Track", Load(SettingsFolder, "Slider_Track"));
         Stretch(track.rectTransform);
@@ -279,7 +279,7 @@ public static class UIBuilder
     {
         MakeRowLabel(panel, name, label, y);
         var off = MakeImage(panel, name, Load(SettingsFolder, "Toggle_Off"));
-        Place(off.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(15f, y), new Vector2(260f, 130f));   // picture shape 2:1
+        Place(off.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-90f, y), new Vector2(260f, 130f));   // picture shape 2:1
         var on = MakeImage(off.transform, "On", Load(SettingsFolder, "Toggle_On"));
         Stretch(on.rectTransform);
         on.raycastTarget = false;
@@ -438,7 +438,7 @@ public static class UIBuilder
         var body = MakeText(panel.transform, "DetailBody", "첫 번째 숫자는 라디오가 들려준다.", Regular, 28, TextAlignmentOptions.TopLeft);
         Place(body.rectTransform, new Vector2(0f, 1f), new Vector2(880f, -490f), new Vector2(560f, 260f), new Vector2(0f, 1f));
 
-        var hint = MakeText(root, "Footer", "W A S D  고르기        [Tab]  닫기", Regular, 24, TextAlignmentOptions.Center);
+        var hint = MakeText(root, "Footer", "[Tab]  닫기", Regular, 24, TextAlignmentOptions.Center);
         Place(hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 90f), new Vector2(900f, 40f));
 
         inv.root = root.gameObject;
