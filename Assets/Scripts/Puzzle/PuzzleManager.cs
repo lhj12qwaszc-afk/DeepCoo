@@ -94,15 +94,10 @@ public class PuzzleManager : MonoBehaviour
         return sprite;
     }
 
-    // Every sheet found in a drawer is a crumpled note, whatever is on it (a written hint, a drawn
-    // hint or just the number); only the board's notes keep their own titles.
+    // Only the sheet with just the number on it is a crumpled note, since a hint says that digit
+    // "is on the crumpled note"; hint sheets keep their own titles wherever they lie, so that hint
+    // can't be read as pointing at them.
     const string CrumpledTitle = "구겨진 쪽지";
-
-    static PlayerInteractor.Note Crumpled(PlayerInteractor.Note note)
-    {
-        note.title = CrumpledTitle;
-        return note;
-    }
 
     // Where the sheets go: see below.
     void PlaceNotes(Dictionary<string, List<Transform>> props)
@@ -125,7 +120,7 @@ public class PuzzleManager : MonoBehaviour
             inside.RemoveAll(d => !Free(d));
             if (inside.Count > 0)
             {
-                inside[Random.Range(0, inside.Count)].PutNote(Crumpled(note));
+                inside[Random.Range(0, inside.Count)].PutNote(note);
                 return;
             }
             var spot = t.GetComponent<ClueSpot>();
@@ -184,7 +179,7 @@ public class PuzzleManager : MonoBehaviour
             drawers.RemoveAll(d => !Free(d));
             if (drawers.Count > 0)
             {
-                drawers[0].PutNote(Crumpled(note));
+                drawers[0].PutNote(note);
                 drawers.RemoveAt(0);
             }
             else
