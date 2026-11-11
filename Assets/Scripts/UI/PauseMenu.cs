@@ -43,8 +43,8 @@ public class PauseMenu : MonoBehaviour
                 Resume();
             return;
         }
-        // a close-up, or the game already stopped (the escape screen), keeps ESC for itself
-        if (busy || Interactable.CloseUpOpen || Time.timeScale == 0f)
+        // a close-up, being caught, or the game already stopped (the escape screen), keeps ESC for itself
+        if (busy || Interactable.CloseUpOpen || CaughtScene.Playing || Time.timeScale == 0f)
             return;
         Open();
     }

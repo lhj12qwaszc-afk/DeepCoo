@@ -46,7 +46,14 @@ public class TentacleWiggle : MonoBehaviour
         public Vector3 foot, stepFrom, stepTo;
         public float stepT = 1f;
         public bool planted;
+        public float stretch = 1f;        // how much the bones are lengthened this frame
     }
+
+    // Set by CaughtScene: the two upper tentacles stretch out and their tips go to these points
+    // (wrapped round the caught player), grabBlend of the way from their normal pose.
+    [System.NonSerialized] public Vector3 grabLeft, grabRight;
+    [System.NonSerialized] public float grabBlend;
+    public float grabStretch = 2.6f;
 
     readonly List<Chain> chains = new List<Chain>();
     float walkBlend, chaseBlend;
@@ -98,6 +105,19 @@ public class TentacleWiggle : MonoBehaviour
         {
             var chain = chains[c];
             Writhe(chain, c * 1.7f, amplitude);
+            if (chain.upper && grabBlend > 0.001f)
+            {
+                chain.stretch = Mathf.Lerp(1f, grabStretch, grabBlend);
+                Stretch(chain, chain.stretch);
+                for (int k = 0; k < chain.bones.Length; k++)
+                    chain.poseLocal[k] = chain.bones[k].localRotation;
+                SolveIK(chain, chain.side < 0f ? grabLeft : grabRight);
+                for (int k = 0; k < chain.bones.Length; k++)
+                    chain.bones[k].localRotation = Quaternion.Slerp(chain.poseLocal[k], chain.bones[k].localRotation, grabBlend);
+                chain.planted = false;
+                continue;
+            }
+            chain.stretch = Mathf.Lerp(1f, chaseStretch, chaseBlend);
             if (chaseBlend <= 0.001f)
             {
                 chain.planted = false;
@@ -141,8 +161,7 @@ public class TentacleWiggle : MonoBehaviour
     Vector3 Tip(Chain chain)
     {
         var last = chain.bones[chain.bones.Length - 1];
-        float factor = Mathf.Lerp(1f, chaseStretch, chaseBlend);
-        return last.TransformPoint(chain.tipLocal * factor);
+        return last.TransformPoint(chain.tipLocal * chain.stretch);
     }
 
     void UpdateFoot(Chain chain, ref int stepping)

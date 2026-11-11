@@ -36,7 +36,11 @@ public class MainMenu : MonoBehaviour
             settingsPanel.SetActive(false);
     }
 
-    public void StartGame() => SceneManager.LoadScene(gameScene);
+    public void StartGame()
+    {
+        RunStats.StartRun();
+        SceneManager.LoadScene(gameScene);
+    }
 
     public void OpenSettings() => settingsPanel.SetActive(true);
 

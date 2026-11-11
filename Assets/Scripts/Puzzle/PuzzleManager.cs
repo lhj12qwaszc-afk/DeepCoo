@@ -17,7 +17,6 @@ public class PuzzleManager : MonoBehaviour
     public enum Source { Gauge, Radio, Birdcage, NumberNote }
 
     static readonly string[] Ordinals = { "첫 번째", "두 번째", "세 번째", "네 번째" };
-    static readonly string[] DigitWords = { "공", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구" };
 
     public int[] Code { get; private set; }
     public Source[] SourceAt { get; private set; }   // which object holds each digit
@@ -39,6 +38,7 @@ public class PuzzleManager : MonoBehaviour
 
     void Awake()
     {
+        RunStats.EnsureStarted();
         Code = new int[4];
         for (int i = 0; i < 4; i++)
             Code[i] = Random.Range(0, 10);
@@ -54,7 +54,7 @@ public class PuzzleManager : MonoBehaviour
         foreach (var radio in props.GetValueOrDefault("Radio", new List<Transform>()))
         {
             var d = DigitOf(Source.Radio);
-            AddSource(radio, "라디오 켜기", $"지지직…  …{DigitWords[d]}…  지지직…  …{DigitWords[d]}…", 12f);
+            AddSource(radio, "라디오 켜기", "", 12f).digit = d;   // tunes in to its digit
         }
         foreach (var cage in props.GetValueOrDefault("Birdcage", new List<Transform>()))
             cage.gameObject.AddComponent<BirdcageInspect>().SetFeathers(DigitOf(Source.Birdcage));
@@ -70,7 +70,7 @@ public class PuzzleManager : MonoBehaviour
         Source.Gauge => "압력계 바늘이 가리킨다.",
         Source.Radio => "라디오가 들려준다.",
         Source.Birdcage => "새장 속 깃털의 개수다.",
-        _ => "어느 서랍 속 구겨진 쪽지에 적혀 있다.",
+        _ => "구겨진 쪽지에 있다.",
     };
 
     // The drawing used on a picture hint, from Resources/Hints: any picture whose name starts
@@ -94,6 +94,16 @@ public class PuzzleManager : MonoBehaviour
         return sprite;
     }
 
+    // Every sheet found in a drawer is a crumpled note, whatever is on it (a written hint, a drawn
+    // hint or just the number); only the board's notes keep their own titles.
+    const string CrumpledTitle = "구겨진 쪽지";
+
+    static PlayerInteractor.Note Crumpled(PlayerInteractor.Note note)
+    {
+        note.title = CrumpledTitle;
+        return note;
+    }
+
     // Where the sheets go: see below.
     void PlaceNotes(Dictionary<string, List<Transform>> props)
     {
@@ -115,7 +125,7 @@ public class PuzzleManager : MonoBehaviour
             inside.RemoveAll(d => !Free(d));
             if (inside.Count > 0)
             {
-                inside[Random.Range(0, inside.Count)].PutNote(note);
+                inside[Random.Range(0, inside.Count)].PutNote(Crumpled(note));
                 return;
             }
             var spot = t.GetComponent<ClueSpot>();
@@ -126,21 +136,26 @@ public class PuzzleManager : MonoBehaviour
 
         // Each hint is written out or drawn (a picture of the source in the digit's box of four);
         // the board's two are always written, the cabinets' two picked anew each run (at least one drawn).
-        // Written hints go on the board (first and
-        // second digits) and in a drawer of filing cabinet 1 (third) and 2 (fourth); drawn hints
-        // and the number note each lie in some other drawer, picked anew each run among those
-        // without a battery (no free drawer left: they go with the written ones).
-        int[] placeFor = boards.Count > 0 ? new[] { 0, 0, 1, 2 } : new[] { 0, 0, 0, 1 };
+        // Written hints go on the board (two digits, which two is picked anew each run) and in a
+        // drawer of filing cabinet 1 and 2 (the other two); drawn hints and the number note each
+        // lie in some other drawer, picked anew each run among those without a battery (no free
+        // drawer left: they go with the written ones).
+        var order = new[] { 0, 1, 2, 3 };
+        Shuffle(order);   // order[0], order[1] on the board; order[2] cabinet 1, order[3] cabinet 2
+        int[] placeFor = new int[4];
+        int[] slots = boards.Count > 0 ? new[] { 0, 0, 1, 2 } : new[] { 0, 0, 0, 1 };
+        for (int i = 0; i < 4; i++)
+            placeFor[order[i]] = slots[i];
         var drawn = new bool[4];
         for (int i = 0; i < 4; i++)
             drawn[i] = Random.value < 0.5f;
         if (boards.Count > 0)
         {
-            // the board's hints (first and second) are always written, so the board is never bare;
+            // the board's hints are always written, so the board is never bare;
             // of the cabinets' two at least one is drawn, so there's always a picture to find
-            drawn[0] = drawn[1] = false;
-            if (!drawn[2] && !drawn[3])
-                drawn[Random.Range(2, 4)] = true;
+            drawn[order[0]] = drawn[order[1]] = false;
+            if (!drawn[order[2]] && !drawn[order[3]])
+                drawn[order[Random.Range(2, 4)]] = true;
         }
         else if (System.Array.TrueForAll(drawn, d => d) || System.Array.TrueForAll(drawn, d => !d))
         {
@@ -169,13 +184,13 @@ public class PuzzleManager : MonoBehaviour
             drawers.RemoveAll(d => !Free(d));
             if (drawers.Count > 0)
             {
-                drawers[0].PutNote(note);
+                drawers[0].PutNote(Crumpled(note));
                 drawers.RemoveAt(0);
             }
             else
                 AtPlace(note, place);
         }
-        Stash(new PlayerInteractor.Note("구겨진 쪽지", $"숫자 하나만 적혀 있다.\n\n{DigitOf(Source.NumberNote)}"), places.Count - 1);
+        Stash(new PlayerInteractor.Note(CrumpledTitle, $"{DigitOf(Source.NumberNote)}"), places.Count - 1);   // just the number
         for (int i = 0; i < 4; i++)
             if (pictures[i].HasValue)
                 Stash(pictures[i].Value, placeFor[i]);

@@ -7,7 +7,7 @@ public class FlashlightBattery : MonoBehaviour
 {
     public Light flashlight;
     [Range(0f, 1f)] public float charge = 1f;
-    public float secondsOfLight = 150f;   // a full battery lasts this long
+    public float secondsOfLight = 240f;   // a full battery lasts this long (4 minutes)
     public float lowCharge = 0.25f;
 
     float baseIntensity;
@@ -63,7 +63,7 @@ public class FlashlightBattery : MonoBehaviour
     {
         if (PauseMenu.IsOpen)
             return;   // drawn over the pause menu otherwise (OnGUI is on top of every canvas)
-        if (Interactable.CloseUpOpen || PositionTracker.InView || !PlayerGear.HasFlashlight || Hidden())   // the tracker covers this corner; no flashlight yet; nothing in hand while hiding
+        if (Interactable.CloseUpOpen || CaughtScene.Playing || PositionTracker.InView || !PlayerGear.HasFlashlight || Hidden())   // the tracker covers this corner; no flashlight yet; nothing in hand while hiding
             return;
         const float x = 20f, y = 20f, w = 70f, h = 18f;
         float top = Screen.height - y - h;

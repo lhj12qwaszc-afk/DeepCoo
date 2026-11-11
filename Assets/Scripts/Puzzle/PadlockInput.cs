@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 // The combination padlock on the exit hatch. E opens a close-up with four dials:
 // A/D (or arrows) pick a dial, W/S turn it, number keys type straight in, Enter tries the code,
-// Esc or Backspace steps back. The right code opens the hatch and ends the game; a wrong one
+// Tab (or Esc, Backspace) steps back, shown at the bottom of the screen. The right code opens the hatch and ends the game; a wrong one
 // rattles the lock loudly enough for the monster to hear.
 public class PadlockInput : Interactable
 {
@@ -48,19 +48,10 @@ public class PadlockInput : Interactable
         var k = Keyboard.current;
         if (k == null)
             return;
-        if (escaped)
-        {
-            if (k.rKey.wasPressedThisFrame)
-            {
-                Time.timeScale = 1f;
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-            }
-            return;
-        }
-        if (!open)
+        if (escaped || !open)   // once out, EscapeEnding takes over
             return;
 
-        if (k.escapeKey.wasPressedThisFrame || k.backspaceKey.wasPressedThisFrame)
+        if (k.tabKey.wasPressedThisFrame || k.escapeKey.wasPressedThisFrame || k.backspaceKey.wasPressedThisFrame)
         {
             SetOpen(false);
             return;
@@ -88,7 +79,7 @@ public class PadlockInput : Interactable
             escaped = true;
             if (Sfx.Bank != null) Sfx.Play(Sfx.Bank.padlockOpen);
             SetOpen(false);
-            Time.timeScale = 0f;   // the monster stops too
+            EscapeEnding.Play();   // out through the hatch, then the record
             return;
         }
         wrongUntil = Time.time + 2f;
@@ -103,7 +94,7 @@ public class PadlockInput : Interactable
 
     void OnGUI()
     {
-        if (!escaped && !open)
+        if (!open)
             return;
         float k = Screen.height / RefHeight;
         W = Screen.width / k;
@@ -116,14 +107,6 @@ public class PadlockInput : Interactable
 
     void Draw()
     {
-        if (escaped)
-        {
-            Shade(0.85f);
-            Label(new Rect(0f, H * 0.36f, W, 70f), "자물쇠가 풀렸다.  해치를 열고 빠져나왔다.", 44);   // bigger than the padlock screen's text
-            Label(new Rect(0f, H * 0.36f + 85f, W, 36f), "[R] 처음부터 다시", 26);
-            return;
-        }
-
         Shade(0.6f);
         const float size = 90f, gap = 20f;
         float total = 4 * size + 3 * gap;
@@ -139,6 +122,8 @@ public class PadlockInput : Interactable
         }
         if (Time.time < wrongUntil)
             Label(new Rect(0f, y + size + 80f, W, 34f), "철컥!  열리지 않는다…", 26);
+        // how to get away from the lock in a hurry
+        Label(new Rect(0f, H - 70f, W, 34f), "[Tab]  나가기", 24);
     }
 
     static void Shade(float alpha)

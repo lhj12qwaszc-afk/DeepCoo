@@ -147,7 +147,14 @@ public static class Sfx
 public class ButtonSounds : MonoBehaviour, IPointerEnterHandler
 {
     // under the mouse: the same clunk as a click, only softer, so the two belong together
-    void Start() => GetComponent<Button>().onClick.AddListener(() => Sfx.PlayUI(Sfx.First(Sfx.Bank?.buttonClick), 0.8f));
+    void Start() => GetComponent<Button>().onClick.AddListener(() =>
+    {
+        Sfx.PlayUI(Sfx.First(Sfx.Bank?.buttonClick), 0.8f);
+        // a clicked button stays "selected" and kept its red-rim look; the menus are mouse-only,
+        // so let go of it once it's been pressed
+        if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject == gameObject)
+            EventSystem.current.SetSelectedGameObject(null);
+    });
 
     public void OnPointerEnter(PointerEventData e)
     {

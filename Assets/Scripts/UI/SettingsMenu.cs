@@ -14,7 +14,38 @@ public class SettingsMenu : MonoBehaviour
 
     void OnEnable()
     {
+        foreach (var s in new[] { brightness, volume, micSensitivity })
+            NarrowHitArea(s);
         Show(GameSettings.Brightness, GameSettings.Volume, GameSettings.MicOn, GameSettings.MicSensitivity);
+    }
+
+    // The slider pictures have tall see-through margins, so a slider's own box reaches into the rows
+    // above and below and a click meant for one slider grabbed its neighbour. Only a thin strip
+    // along the bar (and the dial itself) takes clicks now.
+    const float HitHeight = 0.32f;   // share of the slider box's height that is clickable
+
+    static void NarrowHitArea(Slider slider)
+    {
+        if (slider == null || slider.transform.Find("HitArea") != null)
+            return;
+        foreach (var img in slider.GetComponentsInChildren<Image>(true))
+            if (slider.handleRect == null || img.transform != slider.handleRect)
+                img.raycastTarget = false;
+        var hit = new GameObject("HitArea", typeof(RectTransform), typeof(Image)).GetComponent<RectTransform>();
+        hit.SetParent(slider.transform, false);
+        hit.SetAsFirstSibling();
+        hit.anchorMin = new Vector2(0f, 0.5f - HitHeight / 2f);
+        hit.anchorMax = new Vector2(1f, 0.5f + HitHeight / 2f);
+        hit.offsetMin = hit.offsetMax = Vector2.zero;
+        var image = hit.GetComponent<Image>();
+        image.color = new Color(0f, 0f, 0f, 0f);   // invisible, but it catches the mouse
+        if (slider.handleRect != null)
+        {
+            // the dial too only as tall as the strip
+            var h = slider.handleRect.GetComponent<Image>();
+            if (h != null) h.raycastTarget = false;
+        }
+        slider.targetGraphic = slider.handleRect != null ? slider.handleRect.GetComponent<Image>() : image;
     }
 
     void Show(float bright, float vol, bool mic, float sens)

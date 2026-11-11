@@ -72,8 +72,8 @@ public static class MazeBuilder
         new PropSpec { Name = "TrashBin",      Count = 3, Size = new Vector3(1.88f, 2.25f, 1.5f),  Color = HideColor },
         new PropSpec { Name = "FilingCabinet", Count = 2, Size = CabinetSize,                     Color = ClueColor },
         new PropSpec { Name = "CorkBoard",     Count = 1, Size = new Vector3(1.2f, 0.9f, 0.05f),   Elevation = 1.1f, Color = ClueColor },
-        new PropSpec { Name = "PipeGauge",     Count = 2, Size = new Vector3(1.0f, 0.5f, 0.3f),    Elevation = 0.9f, Color = PuzzleColor },
-        new PropSpec { Name = "Birdcage",      Count = 2, Size = new Vector3(0.5f, 0.7f, 0.5f),    Elevation = 1.3f, Color = PuzzleColor, Hanging = true },
+        new PropSpec { Name = "PipeGauge",     Count = 1, Size = new Vector3(1.0f, 0.5f, 0.3f),    Elevation = 0.9f, Color = PuzzleColor },
+        new PropSpec { Name = "Birdcage",      Count = 1, Size = new Vector3(0.5f, 0.7f, 0.5f),    Elevation = 1.3f, Color = PuzzleColor, Hanging = true },
         new PropSpec { Name = "Radio",         Count = 1, Size = new Vector3(0.35f, 0.22f, 0.12f), Color = PuzzleColor },
     };
 
@@ -204,6 +204,53 @@ public static class MazeBuilder
             drawer.gameObject.AddComponent<Drawer>();
         }
     }
+
+    // The radio stands on a small table against a wall, bigger than life so it can be found in the
+    // dark. Run on the open scene: puts (or re-puts) "RadioTable" at the cell's wall and moves
+    // Radio_1 onto it, facing the corridor.
+    static readonly PropSpec TableSpec = new PropSpec { Name = "Table", Size = new Vector3(0.7f, 0.78f, 0.7f), Color = PuzzleColor };
+    const float RadioScale = 1.5f;
+
+    public static void PlaceRadioOnTable(Vector2Int cell, Vector2Int side)
+    {
+        var props = GameObject.Find("Maze").transform.Find("PropPlaceholders");
+        var radio = props.Find("Radio_1");
+        var old = props.Find("RadioTable");
+        if (old != null)
+            Object.DestroyImmediate(old.gameObject);
+
+        var outward = new Vector3(side.x, 0f, -side.y);   // toward the wall
+        var pos = MazeLayout.CellCenter(cell) + outward * (CellSize / 2f - TableSpec.Size.z / 2f - 0.02f);
+        pos.y = TableSpec.Size.y / 2f;
+        var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        box.name = "RadioTable";
+        box.transform.SetParent(props);
+        box.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(-outward, Vector3.up));
+        box.transform.localScale = TableSpec.Size;
+        box.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Placeholder_Table", PuzzleColor);
+        PlaceModel(box, TableSpec, outward);
+        var model = box.transform.Find("Model");
+        var tb = model != null ? Bounds(model.gameObject) : box.GetComponent<Renderer>().bounds;
+        if (model != null)
+        {
+            // something to bump into instead of the placeholder box
+            Object.DestroyImmediate(box.GetComponent<Collider>());
+            var col = box.AddComponent<BoxCollider>();
+            col.center = box.transform.InverseTransformPoint(tb.center);
+            col.size = Vector3.Scale(tb.size, new Vector3(1f / box.transform.lossyScale.x, 1f / box.transform.lossyScale.y, 1f / box.transform.lossyScale.z));
+        }
+
+        if (radio == null)
+            return;
+        radio.SetPositionAndRotation(radio.position, Quaternion.LookRotation(-outward, Vector3.up));
+        if (!Mathf.Approximately(radio.localScale.x, RadioSize.x * RadioScale))
+            radio.localScale = RadioSize * RadioScale;
+        var rb = Bounds(radio.gameObject);
+        radio.position += new Vector3(tb.center.x - rb.center.x, tb.max.y + 0.002f - rb.min.y, tb.center.z - rb.center.z);
+        EditorUtility.SetDirty(radio);
+    }
+
+    static readonly Vector3 RadioSize = new Vector3(0.35f, 0.22f, 0.12f);
 
     // Puts the current FilingCabinet model into every cabinet already in the open scene, where it
     // stands now (cabinets moved by hand stay put): the old model goes, the new one is fitted

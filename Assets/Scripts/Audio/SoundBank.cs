@@ -11,4 +11,6 @@ public class SoundBank : ScriptableObject
     public AudioClip monsterCoo, monsterAlert, monsterChase;
     public AudioClip scareFlap;
     public AudioClip padlockWrong, padlockOpen;
+    public AudioClip radioStatic;
+    public AudioClip[] radioDigits = new AudioClip[10];   // Radio_0 .. Radio_9, a voice reading the digit
 }

@@ -1,0 +1,1 @@
+Table_mat|Table_0_base.png|Table_0_normal.png|1,1,1

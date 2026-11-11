@@ -51,6 +51,10 @@ public static class SoundSetup
         bank.scareFlap = Clip("Scare_Flap");
         bank.padlockWrong = Clip("Padlock_Wrong");
         bank.padlockOpen = Clip("Padlock_Open");
+        bank.radioStatic = Clip("Radio_Static");
+        bank.radioDigits = new AudioClip[10];
+        for (int i = 0; i < 10; i++)
+            bank.radioDigits[i] = Clip("Radio_" + i);
         EditorUtility.SetDirty(bank);
         AssetDatabase.SaveAssets();
         Debug.Log("[SoundSetup] sound bank filled");

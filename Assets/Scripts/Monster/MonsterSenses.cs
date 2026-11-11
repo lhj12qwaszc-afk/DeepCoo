@@ -79,7 +79,7 @@ public class MonsterSenses : MonoBehaviour
 
         if (mover.IsChasing && distance < catchDistance * transform.lossyScale.y)
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            CaughtScene.Play(this, player);   // lunges at the camera, then the level restarts
             return;
         }
 

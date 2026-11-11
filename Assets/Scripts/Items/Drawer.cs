@@ -117,6 +117,7 @@ public class Drawer : Interactable
                 flashlight.AddCharge(charge);
             Destroy(battery);
             battery = null;
+            RunStats.Batteries++;
             Toast("배터리를 챙겼다.");
             return;
         }

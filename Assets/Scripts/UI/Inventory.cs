@@ -37,6 +37,7 @@ public class Inventory : MonoBehaviour
     readonly List<Image> slotIcons = new List<Image>();
     int selected;
     FirstPersonController fps;
+    bool busyLastFrame;
 
     void Awake()
     {
@@ -157,7 +158,9 @@ public class Inventory : MonoBehaviour
 
         if (!IsOpen)
         {
-            bool busy = Interactable.CloseUpOpen || (fps != null && fps.inputLocked);
+            // busy last frame too: the Tab that just closed the padlock mustn't open the bag as well
+            bool busy = busyLastFrame || Interactable.CloseUpOpen || (fps != null && fps.inputLocked);
+            busyLastFrame = Interactable.CloseUpOpen || (fps != null && fps.inputLocked);
             if (k.tabKey.wasPressedThisFrame && !busy)
                 Open();
             return;

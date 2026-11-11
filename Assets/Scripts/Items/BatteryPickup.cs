@@ -28,6 +28,7 @@ public class BatteryPickup : MonoBehaviour
         if (offset.magnitude < pickupDistance)
         {
             battery.AddCharge(charge);
+            RunStats.Batteries++;
             Destroy(gameObject);
         }
     }

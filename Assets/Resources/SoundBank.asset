@@ -26,3 +26,15 @@ MonoBehaviour:
   scareFlap: {fileID: 8300000, guid: 3a06571c418f58047be3b9f72f2d8609, type: 3}
   padlockWrong: {fileID: 8300000, guid: d25abd5edb4fa1c4a86969b52099cd94, type: 3}
   padlockOpen: {fileID: 8300000, guid: 88648044bdb3a2a459764c4842336319, type: 3}
+  radioStatic: {fileID: 8300000, guid: b3cecb16b0492704da6229d21e545d01, type: 3}
+  radioDigits:
+  - {fileID: 8300000, guid: 3a6a529618516874ebc9a9cd0e7c5f51, type: 3}
+  - {fileID: 8300000, guid: 4b07b38732a5da6459ebb2ba1bca000f, type: 3}
+  - {fileID: 8300000, guid: 2619b485578e8e54fabc9f190b44b18b, type: 3}
+  - {fileID: 8300000, guid: b52687d0f2b96f54f9676e3764172757, type: 3}
+  - {fileID: 8300000, guid: 2cf107aaf21d6164e99a9eb10bea42b8, type: 3}
+  - {fileID: 8300000, guid: 7ccfa9a9667b6964da1e64fdf3ae83f4, type: 3}
+  - {fileID: 8300000, guid: 496b81538d781ea469d8cf5ef0a21a62, type: 3}
+  - {fileID: 8300000, guid: fcf9c0c8c27a96640bb222315eecd1ea, type: 3}
+  - {fileID: 8300000, guid: 99c0a6945e9be2e4fb76c002b0a20225, type: 3}
+  - {fileID: 8300000, guid: df0905a0a7fa25e44a6106d33fdd4018, type: 3}
