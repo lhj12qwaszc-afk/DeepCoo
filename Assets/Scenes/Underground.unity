@@ -20717,8 +20717,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 01be2da93a7763d4ea121de9816c2a92, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterWander
-  walkSpeed: 1.1
-  runSpeed: 4.2
+  walkSpeed: 1.8
+  runSpeed: 5.3
   turnSpeed: 120
   chaseTurnSpeed: 360
   pauseSeconds: {x: 1.5, y: 4}
@@ -33304,6 +33304,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: babc44cc1a621a244a7c12d540bdcc4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Inventory
+  batteryIcon: {fileID: 21300000, guid: d1371ddab67467c418798efe3c78b45c, type: 3}
   root: {fileID: 699044698}
   grid: {fileID: 322728819}
   detailIcon: {fileID: 1875042751}

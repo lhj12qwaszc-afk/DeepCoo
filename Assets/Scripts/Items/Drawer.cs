@@ -112,13 +112,18 @@ public class Drawer : Interactable
         }
         if (battery != null)
         {
-            var flashlight = player.GetComponentInChildren<FlashlightBattery>();
-            if (flashlight != null)
-                flashlight.AddCharge(charge);
+            // into the bag, to put in the flashlight later (bag full: straight into the flashlight)
+            bool kept = Inventory.AddBattery();
+            if (!kept)
+            {
+                var flashlight = player.GetComponentInChildren<FlashlightBattery>();
+                if (flashlight != null)
+                    flashlight.AddCharge(charge);
+            }
             Destroy(battery);
             battery = null;
             RunStats.Batteries++;
-            Toast("배터리를 챙겼다.");
+            Toast(kept ? "배터리를 가방에 넣었다.  [Tab]" : "배터리를 손전등에 넣었다.");
             return;
         }
         if (paper != null)
@@ -184,12 +189,73 @@ public class Drawer : Interactable
         stretch.y = new ParticleSystem.MinMaxCurve(1f);
         stretch.z = new ParticleSystem.MinMaxCurve(1f);
         var r = go.GetComponent<ParticleSystemRenderer>();
-        var featherMat = Resources.Load<Material>("Feather/FeatherParticle");   // the feather picture, see-through
-        r.material = featherMat != null ? featherMat
-            : new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default"));
-        r.renderMode = ParticleSystemRenderMode.Billboard;
-        r.alignment = ParticleSystemRenderSpace.Local;
+        if (!UseFeatherModel(ps, r))
+        {
+            // no feather model: the flat feather picture, see-through
+            var featherMat = Resources.Load<Material>("Feather/FeatherParticle");
+            r.material = featherMat != null ? featherMat
+                : new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit") ?? Shader.Find("Sprites/Default"));
+            r.renderMode = ParticleSystemRenderMode.Billboard;
+            r.alignment = ParticleSystemRenderSpace.Local;
+        }
         ps.Play();
+    }
+
+    // The burst's feathers as the real 3D feather (Resources/Feather/Feather, the birdcage's), not
+    // flat pictures: they tumble, land on the floor and lie there a while, then shrink away.
+    // False when the model isn't there.
+    const float FeatherLength = 0.22f;   // metres, about a pigeon's wing feather
+    const float FloorHeight = 0.01f;     // the maze floor
+
+    static bool UseFeatherModel(ParticleSystem ps, ParticleSystemRenderer r)
+    {
+        var model = Resources.Load<GameObject>("Feather/Feather");
+        var mf = model != null ? model.GetComponentInChildren<MeshFilter>() : null;
+        var mr = model != null ? model.GetComponentInChildren<MeshRenderer>() : null;
+        if (mf == null || mf.sharedMesh == null || mr == null)
+            return false;
+        var mesh = mf.sharedMesh;
+        float longest = Mathf.Max(mesh.bounds.size.x, mesh.bounds.size.y, mesh.bounds.size.z);
+        float k = FeatherLength / Mathf.Max(0.0001f, longest);
+
+        r.renderMode = ParticleSystemRenderMode.Mesh;
+        r.mesh = mesh;
+        r.material = mr.sharedMaterial;
+        r.alignment = ParticleSystemRenderSpace.World;
+
+        var main = ps.main;
+        main.startSize3D = true;
+        main.startSizeX = new ParticleSystem.MinMaxCurve(k * 1.2f, k * 1.8f);   // plumper than the model, as in the cage
+        main.startSizeY = new ParticleSystem.MinMaxCurve(k * 0.8f, k * 1.2f);
+        main.startSizeZ = new ParticleSystem.MinMaxCurve(k * 1.2f, k * 1.8f);
+        main.startColor = Color.white;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(3.5f, 5f);
+        main.gravityModifier = 0.35f;
+
+        // they come down on the floor and stay there instead of falling through it
+        // (against a plane at floor level only: colliding with the world, they hit the cabinet they
+        // start inside and dropped straight down)
+        var hit = ps.collision;
+        hit.enabled = true;
+        hit.type = ParticleSystemCollisionType.Planes;
+        var floorPlane = new GameObject("FeatherFloor").transform;
+        floorPlane.SetParent(ps.transform, false);
+        floorPlane.SetPositionAndRotation(new Vector3(ps.transform.position.x, FloorHeight, ps.transform.position.z), Quaternion.identity);
+        hit.SetPlane(0, floorPlane);
+        hit.bounce = 0.05f;
+        hit.dampen = 0.9f;
+        hit.lifetimeLoss = 0f;
+        hit.radiusScale = 0.3f;
+
+        // an opaque model can't fade out: it shrinks away at the very end instead
+        var fade = ps.colorOverLifetime;
+        fade.enabled = false;
+        var shrink = ps.sizeOverLifetime;
+        shrink.enabled = true;
+        shrink.separateAxes = false;
+        shrink.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+            new Keyframe(0f, 1f), new Keyframe(0.85f, 1f), new Keyframe(1f, 0f)));
+        return true;
     }
 
     void Toast(string text)

@@ -321,7 +321,7 @@ public class PlayerInteractor : MonoBehaviour
         var rects = new System.Collections.Generic.List<Rect>();
         if (kind == HidingSpot.Kind.TrashBin)
         {
-            float gapTop = 0.36f, gapBottom = 0.5f;
+            float gapTop = 0.36f, gapBottom = 0.6f;   // the gap under the lid (bottom edge was 0.5: too thin)
             rects.Add(new Rect(0f, 0f, 1f, gapTop));
             rects.Add(new Rect(0f, gapBottom, 1f, 1f - gapBottom));
         }

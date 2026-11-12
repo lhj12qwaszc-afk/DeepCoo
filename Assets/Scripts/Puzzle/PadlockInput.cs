@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 // The combination padlock on the exit hatch. E opens a close-up with four dials:
-// A/D (or arrows) pick a dial, W/S turn it, number keys type straight in, Enter tries the code,
+// A/D (or arrows) pick a dial, W/S turn it, number keys type straight in, E tries the code,
 // Tab (or Esc, Backspace) steps back, shown at the bottom of the screen. The right code opens the hatch and ends the game; a wrong one
 // rattles the lock loudly enough for the monster to hear.
 public class PadlockInput : Interactable
@@ -17,6 +17,7 @@ public class PadlockInput : Interactable
     bool escaped;
     float wrongUntil;
     FirstPersonController fps;
+    int openedFrame = -1;
 
     // the number row runs 1..9, 0 in the Key enum
     static readonly Key[] DigitKeys = { Key.Digit0, Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4,
@@ -30,6 +31,7 @@ public class PadlockInput : Interactable
     public override void Use(PlayerInteractor player)
     {
         fps = player.GetComponent<FirstPersonController>();
+        openedFrame = Time.frameCount;   // the E that opened it must not also try the code
         SetOpen(true);
     }
 
@@ -68,7 +70,7 @@ public class PadlockInput : Interactable
                 selected = Mathf.Min(selected + 1, 3);
             }
         }
-        if (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame)
+        if (k.eKey.wasPressedThisFrame && Time.frameCount != openedFrame)   // E tries the code (was Enter)
             TryCode();
     }
 
@@ -123,7 +125,7 @@ public class PadlockInput : Interactable
         if (Time.time < wrongUntil)
             Label(new Rect(0f, y + size + 80f, W, 34f), "철컥!  열리지 않는다…", 26);
         // how to get away from the lock in a hurry
-        Label(new Rect(0f, H - 70f, W, 34f), "[Tab]  나가기", 24);
+        Label(new Rect(0f, H - 70f, W, 34f), "[E]  열기        [Tab]  나가기", 24);
     }
 
     static void Shade(float alpha)

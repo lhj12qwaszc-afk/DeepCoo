@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 // the scene's own lighting values are restored when the player goes away.
 public class FlashlightDarkness : MonoBehaviour
 {
-    const float DarkShare = 0.3f;     // how much of the scene's light is left (smaller = darker)
+    const float DarkShare = 0.16f;    // how much of the scene's light is left (smaller = darker; was 0.3, then 0.2)
     const float HiddenShare = 1.1f;   // ...while hidden (the eyes have adjusted)
     const float AdjustSpeed = 2.5f;   // share per second the eyes adjust by
 

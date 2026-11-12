@@ -27,7 +27,8 @@ public class BatteryPickup : MonoBehaviour
         offset.y = 0f;
         if (offset.magnitude < pickupDistance)
         {
-            battery.AddCharge(charge);
+            if (!Inventory.AddBattery())   // into the bag; bag full: straight into the flashlight
+                battery.AddCharge(charge);
             RunStats.Batteries++;
             Destroy(gameObject);
         }

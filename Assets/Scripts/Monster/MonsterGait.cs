@@ -38,6 +38,7 @@ public class MonsterGait : MonoBehaviour
     public float peerEyeHeight = 1.6f;   // the face aims at this height (the hidden player's eyes)
 
     Animator animator;
+    FirstPersonController hiddenPlayer;
     Transform hips, spine, chest, upperChest, neck, head;
     Transform[] upLeg = new Transform[2], leg = new Transform[2], foot = new Transform[2];
     Transform[] arm = new Transform[2], foreArm = new Transform[2], hand = new Transform[2];
@@ -161,11 +162,25 @@ public class MonsterGait : MonoBehaviour
             Turn(hand[side], right, -8f * Mathf.Sin(phase - 1.4f) * sign * walkBlend);
         }
 
+        // The heights to peer at: the hidden player's own eyes when known (a trash bin raises them
+        // well above a locker's slats), else the inspector's defaults.
+        float headHeight = peerHeadHeight, eyeHeight = peerEyeHeight;
+        if (ib > 0.01f)
+        {
+            if (hiddenPlayer == null)
+                hiddenPlayer = FindFirstObjectByType<FirstPersonController>();
+            if (hiddenPlayer != null && hiddenPlayer.IsHidden && hiddenPlayer.cameraRoot != null)
+            {
+                eyeHeight = hiddenPlayer.cameraRoot.position.y;
+                headHeight = eyeHeight - (peerEyeHeight - peerHeadHeight);
+            }
+        }
+
         // Peering: keep bending at the waist until the face is down at the hiding spot's slats.
         float extraBend = 0f;
         if (ib > 0.01f)
         {
-            float targetY = Mathf.Lerp(head.position.y, peerHeadHeight, ib);
+            float targetY = Mathf.Lerp(head.position.y, headHeight, ib);
             while (head.position.y > targetY && extraBend < 120f)
             {
                 Turn(spine, right, 2f);
@@ -208,7 +223,7 @@ public class MonsterGait : MonoBehaviour
         // can't be seen.
         if (ib > 0.01f)
         {
-            float remaining = head.position.y - Mathf.Lerp(head.position.y, peerHeadHeight, ib);
+            float remaining = head.position.y - Mathf.Lerp(head.position.y, headHeight, ib);
             if (remaining > 0f)
                 hips.position -= up * Mathf.Min(remaining, 0.6f * size);
         }
@@ -217,7 +232,7 @@ public class MonsterGait : MonoBehaviour
         if (ib > 0.01f)
         {
             var eyeTarget = mover.InspectLook;
-            eyeTarget.y = peerEyeHeight;
+            eyeTarget.y = eyeHeight;
             var want = (eyeTarget - head.position).normalized;
             var face = head.rotation * headFaceLocal;
             var aim = Quaternion.FromToRotation(face, want);

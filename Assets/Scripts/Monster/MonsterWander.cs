@@ -10,8 +10,8 @@ using UnityEngine;
 // wanders off.
 public class MonsterWander : MonoBehaviour
 {
-    public float walkSpeed = 1.1f;     // m/s, slow and deliberate
-    public float runSpeed = 4.2f;      // just under the player's sprint
+    public float walkSpeed = 1.8f;     // m/s, deliberate but not dawdling (was 1.1: "too slow")
+    public float runSpeed = 5.3f;      // a little faster than the player's sprint (5): running alone won't shake it, hiding will
     public float turnSpeed = 120f;     // degrees per second while walking
     public float chaseTurnSpeed = 360f;
     public Vector2 pauseSeconds = new Vector2(1.5f, 4f);

@@ -416,7 +416,7 @@ public static class UIBuilder
         dim.color = new Color(0f, 0f, 0f, 0.6f);
         Stretch(dim.rectTransform);
 
-        // the panel: slots filling the left side (4 x 2), on the right the picture above and the
+        // the panel: slots filling the left side (4 x 3), on the right the picture above and the
         // name and text below
         var panel = MakeImage(root, "Panel", Load(InventoryFolder, "Panel"));
         panel.rectTransform.sizeDelta = new Vector2(1500f, 797f);
@@ -426,7 +426,7 @@ public static class UIBuilder
         Place(grid, new Vector2(0f, 1f), new Vector2(80f, -80f), new Vector2(760f, 640f), new Vector2(0f, 1f));   // inside the panel's rim
         var g = grid.GetComponent<GridLayoutGroup>();
         g.spacing = new Vector2(12f, 14f);
-        g.cellSize = new Vector2((760f - 3 * 12f) / Inventory.Columns, (640f - 14f) / 2f);
+        g.cellSize = new Vector2((760f - (Inventory.Columns - 1) * 12f) / Inventory.Columns, (640f - (Inventory.Rows - 1) * 14f) / Inventory.Rows);
         g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         g.constraintCount = Inventory.Columns;
 
@@ -452,6 +452,7 @@ public static class UIBuilder
         inv.crumpledNoteIcon = Load(InventoryFolder, "Icon_CrumpledNote");
         inv.flashlightIcon = Load(InventoryFolder, "Icon_Flashlight");
         inv.trackerIcon = Load(InventoryFolder, "Icon_Tracker");
+        inv.batteryIcon = Load(InventoryFolder, "Icon_Battery");
 
         Undo.RegisterCreatedObjectUndo(canvas.gameObject, "Build Inventory View");
         EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
