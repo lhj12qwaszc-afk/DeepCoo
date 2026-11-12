@@ -8,7 +8,7 @@ public class MainMenu : MonoBehaviour
     public string gameScene = "Underground";
     public GameObject settingsPanel;
 
-    public AudioClip music;               // Assets/Audio/Menu_Music, played on a loop
+    public AudioClip music;               // (unused: the music is MenuMusic, begun on the start screen)
     [Range(0f, 1f)] public float musicVolume = 0.6f;
 
     void Start()
@@ -19,16 +19,9 @@ public class MainMenu : MonoBehaviour
             var cam = Camera.main != null ? Camera.main.gameObject : gameObject;
             cam.AddComponent<AudioListener>();
         }
-        if (music == null && Sfx.Bank != null) music = Sfx.Bank.menuMusic;
-        if (music != null)
-        {
-            var source = gameObject.AddComponent<AudioSource>();
-            source.clip = music;
-            source.loop = true;
-            source.volume = musicVolume;
-            source.spatialBlend = 0f;   // not from anywhere in particular
-            source.Play();
-        }
+        // the tune that began on the start screen carries on; it starts here only when the menu is
+        // reached some other way (back from the maze)
+        MenuMusic.Play(1f);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         Time.timeScale = 1f;

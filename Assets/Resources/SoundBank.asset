@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: SoundBank
   m_EditorClassIdentifier: Assembly-CSharp::SoundBank
   menuMusic: {fileID: 8300000, guid: 861f905348f378e4a918354c416d0ba2, type: 3}
+  titleMusic: {fileID: 0}
   buttonHover: {fileID: 8300000, guid: 834923886f2ca644299643d876b79794, type: 3}
   buttonClick: {fileID: 8300000, guid: d6fda27ce6a97544dbc453bc94cead77, type: 3}
   footsteps:

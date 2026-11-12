@@ -1,12 +1,12 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
-// Pressing Play in the Editor always starts from the main menu, like the built game does,
+// Pressing Play in the Editor always starts from the start screen (then the main menu), like the built game does,
 // whichever scene is open. Turn it off with DeepCoo > Play From Main Menu to test a scene directly.
 [InitializeOnLoad]
 public static class PlayFromMainMenu
 {
-    const string MenuScene = "Assets/Scenes/MainMenu.unity";
+    const string MenuScene = "Assets/Scenes/Start.unity";   // the start screen, which leads to the main menu
     const string MenuPath = "DeepCoo/Play From Main Menu";
     const string PrefKey = "DeepCoo.PlayFromMainMenu";
 
