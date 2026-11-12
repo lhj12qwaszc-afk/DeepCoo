@@ -209,9 +209,12 @@ public class EscapeEnding : MonoBehaviour
         Shape(PrimitiveType.Cube, Outside + new Vector3(0f, 0.08f, -hole - 0.05f), new Vector3(hole + 0.1f, 0.06f, hole + 0.1f), metal,
               Quaternion.Euler(-12f, 0f, 0f));
 
-        // pines all around, thicker further out; an open stretch straight ahead
+        // pines all around, thicker further out; an open stretch straight ahead. The fir model
+        // (Resources/Escape/Tree, made in VARCO) when it's there, otherwise stacked cones.
         var rng = new System.Random(7);
         float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+        var treeModel = Resources.Load<GameObject>("Escape/Tree");
+        var treeMat = Resources.Load<Material>("Escape/Tree_mat");
         for (int i = 0; i < 260; i++)
         {
             float angle = R(0f, 360f), dist = R(14f, 150f);
@@ -219,6 +222,17 @@ public class EscapeEnding : MonoBehaviour
                 continue;   // the clearing ahead
             var at = Outside + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * dist;
             float h = R(6f, 13f), w = h * R(0.28f, 0.38f);
+            if (treeModel != null)
+            {
+                var tree = Instantiate(treeModel, at, Quaternion.Euler(0f, R(0f, 360f), 0f), root);
+                // the model stands ModelHeight tall; a little wider or narrower each time
+                float k = h / ModelHeight;
+                tree.transform.localScale = Vector3.Scale(tree.transform.localScale, new Vector3(k * R(0.85f, 1.15f), k, k * R(0.85f, 1.15f)));
+                if (treeMat != null)
+                    foreach (var r in tree.GetComponentsInChildren<Renderer>())
+                        r.sharedMaterial = treeMat;
+                continue;
+            }
             Shape(PrimitiveType.Cylinder, at + Vector3.up * 1f, new Vector3(0.35f, 1f, 0.35f), bark);
             // three stacked cones, each narrower, the classic fir outline
             for (int tier = 0; tier < 3; tier++)
@@ -240,7 +254,23 @@ public class EscapeEnding : MonoBehaviour
         }
 
         // the moon (up ahead, to the right) and stars
-        Shape(PrimitiveType.Sphere, Outside + Quaternion.Euler(-20f, 22f, 0f) * Vector3.forward * 150f, Vector3.one * 6f, moon);
+        var moonDir = Quaternion.Euler(-20f, 22f, 0f) * Vector3.forward;
+        var moonBall = Shape(PrimitiveType.Sphere, Outside + moonDir * 150f, Vector3.one * MoonSize, moon);
+        var moonTex = Resources.Load<Texture2D>("Escape/Moon");   // a flat map of the moon's surface
+        if (moonTex != null)
+        {
+            moon.mainTexture = moonTex;
+            if (moon.HasProperty("_BaseMap")) moon.SetTexture("_BaseMap", moonTex);
+            // brighter than white, so it still shines through the night haze
+            var glowTint = new Color(1.9f, 1.85f, 1.7f);
+            moon.color = glowTint;
+            if (moon.HasProperty("_BaseColor")) moon.SetColor("_BaseColor", glowTint);
+            // turn it so the dark "seas" of the near side face the player
+            moonBall.transform.rotation = Quaternion.LookRotation(moonDir) * Quaternion.Euler(0f, MoonTurn, 0f);
+        }
+        // a soft glow around it
+        var halo = Shape(PrimitiveType.Quad, Outside + moonDir * (150f + MoonSize), Vector3.one * MoonSize * 5.5f, HaloMaterial());
+        halo.transform.rotation = Quaternion.LookRotation(moonDir);
         for (int i = 0; i < 420; i++)
         {
             var dir = Quaternion.Euler(-R(8f, 88f), R(0f, 360f), 0f) * Vector3.forward;
@@ -258,6 +288,28 @@ public class EscapeEnding : MonoBehaviour
         foreach (var l in FindObjectsByType<AudioListener>(FindObjectsSortMode.None))
             if (l.gameObject != cam.gameObject) l.enabled = false;
         return cam;
+    }
+
+    const float ModelHeight = 5f;   // the fir model's height in metres as imported
+    const float MoonTurn = 90f;     // degrees round its axis, to show the familiar face
+    const float MoonSize = 16f;     // metres across, 150 m away (was 6: too small)
+
+    // pale light fading out from the middle, drawn see-through
+    static Material HaloMaterial()
+    {
+        const int size = 128;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+        var px = new Color[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float r = new Vector2(x - size / 2f + 0.5f, y - size / 2f + 0.5f).magnitude / (size / 2f);
+                float a = Mathf.Clamp01(1f - r);
+                px[y * size + x] = new Color(0.8f, 0.85f, 1f, a * a * a * 0.35f);
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        return new Material(Shader.Find("Sprites/Default")) { mainTexture = tex };
     }
 
     // a cone 1 wide and 1 tall, base at the origin

@@ -46,6 +46,8 @@ public class MonsterGait : MonoBehaviour
     Vector3 hipsBindPosition;
 
     float phase;
+    public float Phase => phase;          // the walk cycle, radians; a foot lands every half turn (MonsterSteps)
+    public float RunBlend => runBlend;    // 0 walking .. 1 running
     float walkBlend;
     float runBlend;
     float inspectBlend;

@@ -73,7 +73,8 @@ public static class Sfx
     {
         if (clip == null)
             return new List<AudioClip>();
-        if (pieces.TryGetValue(clip, out var done))
+        // (cut pieces are thrown away when play mode stops; the editor keeps this list, so check)
+        if (pieces.TryGetValue(clip, out var done) && done.TrueForAll(p => p != null))
             return done;
         var result = new List<AudioClip>();
         pieces[clip] = result;

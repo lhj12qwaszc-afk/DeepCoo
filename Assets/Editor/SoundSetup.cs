@@ -38,13 +38,11 @@ public static class SoundSetup
         bank.menuMusic = Clip("Menu_Music");
         bank.buttonHover = Clip("Button_Hover");
         bank.buttonClick = Clip("Button_Click");
-        var steps = new System.Collections.Generic.List<AudioClip>();
-        for (int i = 1; i <= 8; i++)
-        {
-            var c = Clip("Footstep_" + i);
-            if (c != null) steps.Add(c);
-        }
-        bank.footsteps = steps.ToArray();
+        bank.footsteps = Numbered("Footstep_");
+        bank.footstepsCrouch = Numbered("Footstep_Crouch_");
+        bank.footstepsRun = Numbered("Footstep_Run_");
+        bank.monsterWalk = Numbered("Monster_Walk_");
+        bank.monsterRun = Numbered("Monster_Run_");
         bank.monsterCoo = Clip("Monster_Coo");
         bank.monsterAlert = Clip("Monster_Alert");
         bank.monsterChase = Clip("Monster_Chase");
@@ -58,6 +56,18 @@ public static class SoundSetup
         EditorUtility.SetDirty(bank);
         AssetDatabase.SaveAssets();
         Debug.Log("[SoundSetup] sound bank filled");
+    }
+
+    // name1, name2, ... up to name8, as many as there are
+    static AudioClip[] Numbered(string prefix)
+    {
+        var list = new System.Collections.Generic.List<AudioClip>();
+        for (int i = 1; i <= 8; i++)
+        {
+            var c = Clip(prefix + i);
+            if (c != null) list.Add(c);
+        }
+        return list.ToArray();
     }
 
     static AudioClip Clip(string name)

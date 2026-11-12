@@ -19,7 +19,11 @@ MonoBehaviour:
   - {fileID: 8300000, guid: dcb068774b8d9ce4abe9096527d99ad3, type: 3}
   - {fileID: 8300000, guid: 0ceae4d5cd976b04aaef06a3adee9f02, type: 3}
   - {fileID: 8300000, guid: 87f46326ebeb7ba4f98ba741c7bb0b17, type: 3}
-  - {fileID: 8300000, guid: 05e6bc847ad136e48a86a650301c9ca2, type: 3}
+  footstepsCrouch:
+  - {fileID: 8300000, guid: c42127b973eae864e87bc00c452ca9e8, type: 3}
+  footstepsRun:
+  - {fileID: 8300000, guid: e530f29c6cfe5814b9730c990d05d4a5, type: 3}
+  - {fileID: 8300000, guid: 2762901aefe9cf3468ca83b03f29ccd3, type: 3}
   monsterCoo: {fileID: 8300000, guid: 40e4d43bc8838e6498d2b234fe1a00fe, type: 3}
   monsterAlert: {fileID: 8300000, guid: eeed37e18e414fa41a34f26ebc8d45aa, type: 3}
   monsterChase: {fileID: 8300000, guid: b4ecc5d0e1750e449a3e31f91c3e818d, type: 3}
@@ -38,3 +42,10 @@ MonoBehaviour:
   - {fileID: 8300000, guid: fcf9c0c8c27a96640bb222315eecd1ea, type: 3}
   - {fileID: 8300000, guid: 99c0a6945e9be2e4fb76c002b0a20225, type: 3}
   - {fileID: 8300000, guid: df0905a0a7fa25e44a6106d33fdd4018, type: 3}
+  monsterWalk:
+  - {fileID: 8300000, guid: 9461090c7da59a54cb1cac6e1132d0cc, type: 3}
+  - {fileID: 8300000, guid: 6d7b78aea47618644a78369bc3b27d75, type: 3}
+  - {fileID: 8300000, guid: eb867d07322d05b488ed92634f77a42b, type: 3}
+  monsterRun:
+  - {fileID: 8300000, guid: d06fb8fc66d434a4c9c141ca0a972285, type: 3}
+  - {fileID: 8300000, guid: 4aa1359888045904aa2d0532fef22dbf, type: 3}
