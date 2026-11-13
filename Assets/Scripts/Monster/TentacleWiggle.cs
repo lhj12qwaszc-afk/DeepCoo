@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Animates the monster's four back tentacles.
+// - While it roams it floats (MonsterGait): the tentacles stream out behind it and writhe
+//   freely up and down, each now and then unfurling wide (sideways, up, down) and curling back.
 // - Normally they writhe loosely: a travelling wave runs along each bone chain in two
 //   directions, stronger and faster while the monster walks.
 // - While chasing they stretch out and work as extra legs: each tip plants on the floor ahead
@@ -18,6 +20,18 @@ public class TentacleWiggle : MonoBehaviour
     public float idleFrequency = 0.6f;   // waves per second
     public float walkFrequency = 1.3f;
     public float wavePerBone = 0.7f;     // phase shift between neighbouring bones
+
+    [Header("Floating (roaming)")]
+    // While MonsterGait floats the body, the tentacles stream out behind it and writhe freely
+    // up and down, each at its own pace, a wave running down them (see Droop).
+    public float floatStretch = 1.3f;
+    public float hangSide = 0.5f;        // how far they lean out to their side (share of "behind")
+    public float spreadSide = 1.6f;      // ...and how far when unfurled wide
+    public float spreadSpeed = 0.22f;    // how often they unfurl and curl back (noise speed)
+    public float verticalSwing = 1.2f;   // how far the wave throws them up and down
+    public float droopBias = 0.25f;      // a slight sag on average
+    public float paddleReach = 0.3f;     // how far the wave swings them forward and back
+    public float paddleSpeed = 1.6f;     // radians per second
 
     [Header("Chase")]
     public float chaseStretch = 2.3f;    // bones lengthen so the tips can reach the floor
@@ -56,6 +70,7 @@ public class TentacleWiggle : MonoBehaviour
     public float grabStretch = 2.6f;
 
     readonly List<Chain> chains = new List<Chain>();
+    MonsterGait gait;
     float walkBlend, chaseBlend;
     float time;
 
@@ -63,6 +78,7 @@ public class TentacleWiggle : MonoBehaviour
     {
         if (mover == null)
             mover = GetComponent<MonsterWander>();
+        gait = GetComponent<MonsterGait>();
         var byName = new Dictionary<string, Transform>();
         foreach (var t in GetComponentsInChildren<Transform>())
             byName[t.name] = t;
@@ -117,13 +133,17 @@ public class TentacleWiggle : MonoBehaviour
                 chain.planted = false;
                 continue;
             }
-            chain.stretch = Mathf.Lerp(1f, chaseStretch, chaseBlend);
+            // floating: hang down under the body and paddle (fades out as the chase takes over)
+            float hang = (gait != null ? gait.FloatBlend : 0f) * (1f - chaseBlend);
+            chain.stretch = Mathf.Lerp(Mathf.Lerp(1f, floatStretch, hang), chaseStretch, chaseBlend);
+            Stretch(chain, chain.stretch);
+            if (hang > 0.001f)
+                Droop(chain, c, hang);
             if (chaseBlend <= 0.001f)
             {
                 chain.planted = false;
                 continue;
             }
-            Stretch(chain, Mathf.Lerp(1f, chaseStretch, chaseBlend));
             UpdateFoot(chain, ref stepping);
 
             for (int k = 0; k < chain.bones.Length; k++)
@@ -149,6 +169,48 @@ public class TentacleWiggle : MonoBehaviour
             float pitch = Mathf.Sin(wave) * amplitude * weight;
             float yaw = Mathf.Sin(wave * 0.7f + 1.3f) * amplitude * 0.8f * weight;
             bones[k].rotation = Quaternion.AngleAxis(yaw, up) * Quaternion.AngleAxis(pitch, right) * bones[k].rotation;
+        }
+    }
+
+    // From the root to the tip each bone is turned part of the way toward "behind, out to its
+    // side", more toward the tip, so the tentacle curves smoothly away from the body (clear of
+    // the legs). A wave running from root to tip throws that direction up and down (plus a
+    // little forward/back and sideways), and a slow random drift keeps the four out of step.
+    void Droop(Chain chain, int index, float weight)
+    {
+        var bones = chain.bones;
+        var up = transform.up;
+        var back = -transform.forward;
+        var side = transform.right * chain.side;
+        // each tentacle at its own pace, and that pace drifts, so the four never fall into step
+        float t = Time.time;
+        float speed = paddleSpeed * (0.8f + 0.15f * index);
+        float baseWave = t * speed + index * 1.6f;
+        float drift = Mathf.PerlinNoise(t * 0.35f, index * 3.1f) * 2f - 1f;   // slow -1..1
+        // now and then a tentacle unfurls wide (open -> 1), then slowly curls back behind (-> 0);
+        // while open it points out to its side, up or down and forward or back, wherever its own
+        // slow random drift takes it
+        float open = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.PerlinNoise(t * spreadSpeed, index * 5.3f + 10f) * 1.8f - 0.4f));
+        float lift = Mathf.PerlinNoise(t * 0.3f, index * 2.7f + 20f) * 2f - 1f;
+        float reach = Mathf.PerlinNoise(t * 0.3f, index * 4.1f + 30f) * 2f - 1f;
+        int n = bones.Length;
+        for (int k = 0; k < n; k++)
+        {
+            var from = bones[k].position;
+            var to = k + 1 < n ? bones[k + 1].position : Tip(chain);
+            var dir = to - from;
+            if (dir.sqrMagnitude < 1e-6f)
+                continue;
+            float wave = baseWave - k * wavePerBone;
+            var want = (back * Mathf.Lerp(1f, 0.25f, open)
+                + up * (verticalSwing * Mathf.Sin(wave) + Mathf.Lerp(0.5f * drift - droopBias, 1.3f * lift, open))
+                + transform.forward * (paddleReach * Mathf.Sin(wave * 0.6f + 2f) + 0.6f * reach * open)
+                + side * (Mathf.Lerp(hangSide, spreadSide, open) + 0.35f * Mathf.Sin(wave * 0.8f + 1f))).normalized;
+            // root bones only lean a little (they grow out of the back), the tip moves freely;
+            // unfurled, the whole tentacle swings out
+            float bend = Mathf.Lerp(Mathf.Lerp(0.25f, 0.4f, open), Mathf.Lerp(0.7f, 0.85f, open), k / (float)Mathf.Max(1, n - 1)) * weight;
+            var turn = Quaternion.FromToRotation(dir, Vector3.Slerp(dir.normalized, want, bend));
+            bones[k].rotation = turn * bones[k].rotation;
         }
     }
 

@@ -309,8 +309,23 @@ public class PlayerInteractor : MonoBehaviour
     {
         float W = Screen.width, H = Screen.height;
         GUI.color = SlatColor;
-        foreach (var r in SlatRects(kind))
+        // knocked about while the monster shakes the spot (HideRattle); pieces touching a screen
+        // edge are stretched past it so no gap opens there
+        var jolt = HideRattle.SlatJolt;
+        const float pad = 0.1f;
+        foreach (var src in SlatRects(kind))
+        {
+            var r = src;
+            if (jolt != Vector2.zero)
+            {
+                if (r.xMin <= 0.001f) r.xMin -= pad;
+                if (r.xMax >= 0.999f) r.xMax += pad;
+                if (r.yMin <= 0.001f) r.yMin -= pad;
+                if (r.yMax >= 0.999f) r.yMax += pad;
+                r.position += jolt;
+            }
             GUI.DrawTexture(new Rect(r.x * W, r.y * H, r.width * W, r.height * H), Texture2D.whiteTexture);
+        }
         GUI.color = Color.white;
     }
 

@@ -16,4 +16,5 @@ public class SoundBank : ScriptableObject
     public AudioClip radioStatic;
     public AudioClip[] radioDigits = new AudioClip[10];   // Radio_0 .. Radio_9, a voice reading the digit
     public AudioClip[] monsterWalk, monsterRun;           // Monster_Walk_*, Monster_Run_*: its footfalls
+    public AudioClip hideRattle;                          // Hide_Rattle: the monster shaking the hiding spot the player is in
 }

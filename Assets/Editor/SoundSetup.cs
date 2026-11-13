@@ -50,6 +50,7 @@ public static class SoundSetup
         bank.padlockWrong = Clip("Padlock_Wrong");
         bank.padlockOpen = Clip("Padlock_Open");
         bank.radioStatic = Clip("Radio_Static");
+        bank.hideRattle = Clip("Hide_Rattle");
         bank.radioDigits = new AudioClip[10];
         for (int i = 0; i < 10; i++)
             bank.radioDigits[i] = Clip("Radio_" + i);

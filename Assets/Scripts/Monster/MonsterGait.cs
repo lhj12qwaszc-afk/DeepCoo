@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// While roaming it floats a little above the floor (see "Floating" below) instead of walking.
 // Procedural, unsettling walk for the pigeon monster, driven by MonsterWander.CurrentSpeed:
 // hunched spine, long legs stepping, limp dangling arms, a pigeon-like head bob while
 // walking, and sudden jerky head turns while standing still. While chasing it drops low,
@@ -36,6 +37,19 @@ public class MonsterGait : MonoBehaviour
     public float peerHeadHeight = 1.35f; // world metres (head bone): bends further until the eyes are at the slats
     public float faceGlow = 0.9f;        // faint light on the face so it shows through the slats
     public float peerEyeHeight = 1.6f;   // the face aims at this height (the hidden player's eyes)
+
+    [Header("Floating (roaming)")]
+    // While it roams (not chasing, not peering into a hiding spot) it floats instead of walking:
+    // the body hangs in the air, slowly bobbing, legs dangling; TentacleWiggle lets the tentacles
+    // hang down and paddle underneath. The ceiling is 4.5 m, so the lift stays small.
+    public float hoverHeight = 0.45f;   // world metres the body rises
+    public float hoverBob = 0.08f;      // world metres up and down
+    public float hoverBobSpeed = 1.1f;  // radians per second
+
+    float floatBlend;
+    HideRattle rattle;
+    float holdBlend;
+    public float FloatBlend => floatBlend;   // 0 on its feet .. 1 floating
 
     Animator animator;
     FirstPersonController hiddenPlayer;
@@ -110,6 +124,9 @@ public class MonsterGait : MonoBehaviour
         runBlend = Mathf.MoveTowards(runBlend, mover != null && mover.IsChasing ? 1f : 0f, Time.deltaTime * 2.5f);
         inspectBlend = Mathf.MoveTowards(inspectBlend, mover != null && mover.IsInspecting ? 1f : 0f, Time.deltaTime * 1.8f);
         float ib = inspectBlend * inspectBlend * (3f - 2f * inspectBlend);
+        bool floating = mover != null && !mover.IsChasing && !mover.IsInspecting && !CaughtScene.Playing;
+        floatBlend = Mathf.MoveTowards(floatBlend, floating ? 1f : 0f, Time.deltaTime * 1.2f);
+        float fb = floatBlend * floatBlend * (3f - 2f * floatBlend);
         // Distances are tuned for the model at scale 1; a bigger monster takes bigger steps.
         float size = transform.lossyScale.y;
         float stride = Mathf.Lerp(strideLength, runStrideLength, runBlend) * size;
@@ -129,8 +146,9 @@ public class MonsterGait : MonoBehaviour
         float s = Mathf.Sin(phase), c = Mathf.Cos(phase);
 
         // Body: hunched forward, bobbing and rolling with each step, slow breathing when still.
-        hips.position += up * size * (walkBlend * hipBob * (1f + runBlend) * (Mathf.Abs(c) - 0.5f)
+        hips.position += up * size * (walkBlend * hipBob * (1f + runBlend) * (Mathf.Abs(c) - 0.5f) * (1f - fb)
                                       - runCrouch * runBlend - squatDrop * ib);
+        hips.position += up * (hoverHeight + Mathf.Sin(t * hoverBobSpeed) * hoverBob) * fb;
         Turn(hips, forward, walkBlend * 4f * s);
         Turn(hips, right, runLean * 0.4f * runBlend);
         float breath = Mathf.Sin(t * (1.3f + ib * 1.2f)) * (1.5f + ib);   // breathes faster while peering
@@ -143,12 +161,14 @@ public class MonsterGait : MonoBehaviour
         for (int side = 0; side < 2; side++)
         {
             float sign = side == 0 ? 1f : -1f;
-            float swing = -swingAmount * sign * s * walkBlend;
-            float knee = kneeAmount * Mathf.Max(0f, sign * c) * walkBlend;
+            float swing = -swingAmount * sign * s * walkBlend * (1f - fb);
+            float knee = kneeAmount * Mathf.Max(0f, sign * c) * walkBlend * (1f - fb);
+            // floating: legs trail a little behind, knees loosely bent, swaying out of step
+            float dangle = Mathf.Sin(t * hoverBobSpeed * 1.3f + side * 1.7f);
             // lift the thighs back up against the lean so the feet stay under the body
-            Turn(upLeg[side], right, swing - runLean * runBlend - squatThigh * ib);
-            Turn(leg[side], right, knee + squatKnee * ib);
-            Turn(foot[side], right, -(swing + knee) * 0.5f - (squatKnee - squatThigh) * ib);
+            Turn(upLeg[side], right, swing - runLean * runBlend - squatThigh * ib + (10f + dangle * 6f) * fb);
+            Turn(leg[side], right, knee + squatKnee * ib + (18f + dangle * 8f) * fb);
+            Turn(foot[side], right, -(swing + knee) * 0.5f - (squatKnee - squatThigh) * ib + 30f * fb);
         }
 
         // Arms: long and limp, swinging opposite the legs and lagging behind.
@@ -157,9 +177,20 @@ public class MonsterGait : MonoBehaviour
             float sign = side == 0 ? 1f : -1f;
             float sway = Mathf.Sin(t * 0.9f + side) * 2f;
             // while peering the long arms hang forward, claws almost touching the door
-            Turn(arm[side], right, armSwing * (1f + runBlend) * sign * s * walkBlend + sway - runArmReach * runBlend - 35f * ib);
+            Turn(arm[side], right, armSwing * (1f + runBlend) * sign * s * walkBlend * (1f - fb) + sway * (1f + fb) - runArmReach * runBlend - 35f * ib);
             Turn(foreArm[side], right, -armSwing * 0.7f * sign * Mathf.Sin(phase - 0.8f) * walkBlend - 6f - 15f * runBlend);
             Turn(hand[side], right, -8f * Mathf.Sin(phase - 1.4f) * sign * walkBlend);
+        }
+
+        // Shaking the hiding spot (HideRattle): both arms thrust out to grip the door and jerk with each bang.
+        if (rattle == null)
+            rattle = GetComponent<HideRattle>();
+        holdBlend = Mathf.MoveTowards(holdBlend, rattle != null && rattle.Holding ? 1f : 0f, Time.deltaTime * 4f);
+        float jerk = rattle != null ? rattle.Shake * Mathf.Sin(t * 38f) * 12f : 0f;
+        for (int side = 0; side < 2; side++)
+        {
+            Turn(arm[side], right, (-45f + jerk) * holdBlend);
+            Turn(foreArm[side], right, (-20f - jerk * 0.6f) * holdBlend);
         }
 
         // The heights to peer at: the hidden player's own eyes when known (a trash bin raises them

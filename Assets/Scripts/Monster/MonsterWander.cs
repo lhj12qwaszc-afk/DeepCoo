@@ -79,6 +79,13 @@ public class MonsterWander : MonoBehaviour
         pathIndex = 1;
     }
 
+    // Keeps it at the hiding spot at least this many more seconds (HideRattle, while it shakes it).
+    public void HoldInspect(float seconds)
+    {
+        if (IsInspecting)
+            inspectTimer = Mathf.Max(inspectTimer, seconds);
+    }
+
     void Update()
     {
         if (investigating)

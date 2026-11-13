@@ -20638,6 +20638,14 @@ MonoBehaviour:
   idleFrequency: 0.6
   walkFrequency: 1.3
   wavePerBone: 0.7
+  floatStretch: 1.3
+  hangSide: 0.5
+  spreadSide: 1.6
+  spreadSpeed: 0.22
+  verticalSwing: 1.2
+  droopBias: 0.25
+  paddleReach: 0.3
+  paddleSpeed: 1.6
   chaseStretch: 2.3
   upperReach: 1.9
   lowerReach: 1
@@ -20682,6 +20690,9 @@ MonoBehaviour:
   peerHeadHeight: 1.35
   faceGlow: 0.9
   peerEyeHeight: 1.6
+  hoverHeight: 0.45
+  hoverBob: 0.08
+  hoverBobSpeed: 1.1
 --- !u!114 &762348465
 MonoBehaviour:
   m_ObjectHideFlags: 0

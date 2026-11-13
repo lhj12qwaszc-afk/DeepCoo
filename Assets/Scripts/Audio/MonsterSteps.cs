@@ -49,6 +49,8 @@ public class MonsterSteps : MonoBehaviour
         lastHalfStep = halfStep;
         if (mover != null && mover.CurrentSpeed < 0.2f)
             return;   // shuffling on the spot, kneeling at a hiding spot: no footfall
+        if (gait.FloatBlend > 0.5f)
+            return;   // floating while it roams: its feet don't touch the floor
         Step(gait.RunBlend > 0.5f);
     }
 
