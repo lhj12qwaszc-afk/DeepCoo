@@ -41,10 +41,23 @@ public static class GameSettings
 
     // multiplier for the maze's leftover light: 0.5x at the darkest, 1x in the middle, 2x at the brightest
     public static float BrightnessFactor { get; private set; } = 1f;
-    static float Factor() => Mathf.Pow(2f, (Brightness - 0.5f) * 2f);
+    static float Factor() => Factor(Brightness);
+    static float Factor(float brightness) => Mathf.Pow(2f, (brightness - 0.5f) * 2f);
 
     // the quietest sound (dB) the monster still hears: -35 dB at low sensitivity, -55 dB at high
-    public static float MicQuietDb => Mathf.Lerp(-35f, -55f, MicSensitivity);
+    public static float MicQuietDb => Mathf.Lerp(-35f, -55f, sensitivityPreview ?? MicSensitivity);
+
+    // While the settings panel is open its dials are tried out at once, before Save
+    // (EndPreview puts the saved values back).
+    static float? sensitivityPreview;
+    public static void PreviewBrightness(float brightness) => BrightnessFactor = Factor(brightness);
+    public static void PreviewSensitivity(float sensitivity) => sensitivityPreview = sensitivity;
+    public static void EndPreview()
+    {
+        sensitivityPreview = null;
+        BrightnessFactor = Factor();
+        AudioListener.volume = Volume;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void ApplyOnStart()

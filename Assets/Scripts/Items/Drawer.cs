@@ -123,7 +123,7 @@ public class Drawer : Interactable
             Destroy(battery);
             battery = null;
             RunStats.Batteries++;
-            Toast(kept ? "배터리를 가방에 넣었다.  [Tab]" : "배터리를 손전등에 넣었다.");
+            Toast(kept ? "배터리를 가방에 넣었다." : "배터리를 손전등에 넣었다.");
             return;
         }
         if (paper != null)

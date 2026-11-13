@@ -3,7 +3,8 @@ using UnityEngine.UI;
 
 // The settings panel on the main menu (built by DeepCoo > Build Settings Panel, can be laid out
 // by hand afterwards). Opening it shows the saved values. Moving a dial or the lever changes
-// nothing yet: Save keeps the new values and closes the panel, Back closes it without saving,
+// at once as a preview (volume, brightness, sensitivity): Save keeps the new values and
+// closes the panel, Back closes it without saving (the old values come back),
 // Reset puts every control back to the starting values (still to be saved).
 // The red bar of each slider is an Image filled from the left up to the dial.
 public class SettingsMenu : MonoBehaviour
@@ -54,7 +55,17 @@ public class SettingsMenu : MonoBehaviour
         Hook(volume, volumeFill, vol);
         Hook(micSensitivity, micSensitivityFill, sens);
         if (micOn != null) micOn.isOn = mic;
+        // every dial is tried out straight away while it moves (Save keeps it, Back undoes it)
+        AudioListener.volume = vol;
+        GameSettings.PreviewBrightness(bright);
+        GameSettings.PreviewSensitivity(sens);
+        if (volume != null) volume.onValueChanged.AddListener(v => AudioListener.volume = v);
+        if (brightness != null) brightness.onValueChanged.AddListener(GameSettings.PreviewBrightness);
+        if (micSensitivity != null) micSensitivity.onValueChanged.AddListener(GameSettings.PreviewSensitivity);
     }
+
+    // closing the panel (Back, or after Save) leaves the saved values in use
+    void OnDisable() => GameSettings.EndPreview();
 
     static void Hook(Slider slider, Image fill, float value)
     {
